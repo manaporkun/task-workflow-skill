@@ -49,13 +49,19 @@ Agent availability is cached at `~/.claude/do-env.json` to avoid redundant `whic
 These are project-specific and must be checked every time:
 
 1. **Project config**: `cat .claude/do-config.json 2>/dev/null`
-2. **Project type**: `sh -c 'ls -1 package.json Podfile *.xcodeproj pyproject.toml go.mod Cargo.toml Makefile 2>/dev/null || echo "no project files"'`
+2. **Project type**: `sh -c 'ls -1 package.json Podfile *.xcodeproj pyproject.toml requirements.txt go.mod Cargo.toml Makefile 2>/dev/null || echo "no project files"'`
 
 Record which agents are available and proceed. If no external agents are found, skip external review phases.
 
 ### Configuration
 
-If `.claude/do-config.json` exists, use its values. Schema:
+If `.claude/do-config.json` exists, validate and use its values:
+- `agents` must be an object with array values (e.g. `{"planReview": [...], "codeReview": [...]}`), not a bare string or array
+- Each agent entry must match the format `"gemini"`, `"codex"`, or `"ollama:<model>"`
+- `maxIterations` must be a positive integer if present
+- If the config is malformed, warn the user and fall back to auto-detection
+
+Schema:
 
 ```json
 {
@@ -87,12 +93,12 @@ Agent format:
 - `"ollama:<model>"` — Ollama with a specific model (e.g. `"ollama:qwen2.5-coder"`)
 
 If `agents` is omitted, all phases use the first available agent detected in the environment.
-The `agentCommands` field is optional — if omitted, use the default commands listed in Phase 2.
+The `agentCommands` field is optional — if omitted, use the default commands listed in the Analyze phase.
 If no config file exists, auto-detect everything from the environment output above.
 
 ---
 
-## Phase 1: PLAN
+## Phase 1: PLAN (Research & Design)
 
 1. Analyze the task: **$ARGUMENTS**
 2. Explore the codebase to understand relevant files, patterns, and architecture
@@ -108,11 +114,11 @@ If no config file exists, auto-detect everything from the environment output abo
 
 ---
 
-## Phase 2: EXTERNAL ANALYSIS
+## Phase 2: ANALYZE (External Review)
 
-> If no external agent is available, skip to the CHECKPOINT below.
+> If no external agent is available, skip to Phase 3.
 
-1. Read the prompt template from `${CLAUDE_SKILL_DIR}/prompts/plan-review.md`
+1. Read the prompt template from `${CLAUDE_SKILL_DIR}/prompts/plan-review.md` (`$CLAUDE_SKILL_DIR` is set by Claude Code to the skill's directory at runtime)
 2. Build the full review prompt by replacing the template placeholders:
    - `{TASK}` → the task description ($ARGUMENTS)
    - `{PLAN}` → the full plan content
@@ -126,14 +132,16 @@ If no config file exists, auto-detect everything from the environment output abo
    - **Ollama**: `timeout 120 sh -c 'cat $PLAN_REVIEW_FILE | ollama run <model>'` — replace `<model>` with the model from the agent string (e.g. `ollama:qwen2.5-coder` → `qwen2.5-coder`)
    - **Custom**: If `agentCommands` defines a command for this agent, use it with `{file}` replaced by `$PLAN_REVIEW_FILE` and `{model}` replaced by the model name
    - If the agent call times out or fails, try the next agent in the list. If all fail, note the failure and continue to the checkpoint.
-6. Clean up: `rm -f $PLAN_REVIEW_FILE`
+6. Clean up: `rm -f $PLAN_REVIEW_FILE` — **always run this**, even if the agent call failed or timed out, to avoid leaving prompt content on disk.
 7. Capture and analyze the feedback
 8. If the feedback suggests significant improvements:
    - Revise the plan
    - Update the saved plan file
    - Note what changed and why
 
-### CHECKPOINT — User Approval
+---
+
+## Phase 3: APPROVE (User Checkpoint)
 
 Present to the user:
 - The implementation plan (revised if applicable)
@@ -142,13 +150,13 @@ Present to the user:
 
 **STOP. Ask the user to approve, reject, or request changes to the plan.**
 
-- **If approved**: proceed to Phase 3.
+- **If approved**: proceed to Phase 4.
 - **If rejected with feedback**: revise the plan based on user feedback, update the saved plan file, re-run external analysis if the changes are significant, then present the revised plan again. Repeat until approved.
 - **If rejected without feedback**: ask the user what they'd like changed before proceeding.
 
 ---
 
-## Phase 3: IMPLEMENT
+## Phase 4: IMPLEMENT
 
 1. Review the approved plan
 2. For each implementation unit:
@@ -160,9 +168,9 @@ Present to the user:
 
 ---
 
-## Phase 4: QUALITY CONTROL
+## Phase 5: QUALITY CONTROL
 
-### 4a — Automated Testing
+### 5a — Automated Testing
 
 Run QC commands based on project type (or config overrides):
 
@@ -178,9 +186,9 @@ Run QC commands based on project type (or config overrides):
 On failure: analyze the error, fix the issue, re-run the failing command.
 Maximum **3 iterations** per failing command. If still failing after 3 attempts, report the failure and continue.
 
-### 4b — External Code Review
+### 5b — External Code Review
 
-> If no external agent is available, skip to Phase 5.
+> If no external agent is available, skip to Phase 6.
 
 1. Generate a diff of all changes including new untracked files:
    - Identify new untracked files created during implementation (use `git ls-files --others --exclude-standard` and filter to files relevant to the plan)
@@ -196,7 +204,7 @@ Maximum **3 iterations** per failing command. If still failing after 3 attempts,
    `CODE_REVIEW_FILE=$(mktemp /tmp/do-code-review-XXXXXX.md)` then write the prompt content to `$CODE_REVIEW_FILE`
 5. Select the agent: use the first available entry from `agents.codeReview` in config, or fall back to the first detected agent.
 6. Call the selected agent (same invocation patterns and timeout as Phase 2, using `$CODE_REVIEW_FILE` as the temp file). For **Codex** specifically, you may also try `codex review` as an alternative.
-   Clean up after the agent call: `rm -f $CODE_REVIEW_FILE`
+   Clean up after the agent call: `rm -f $CODE_REVIEW_FILE` — **always run this**, even if the agent call failed or timed out, to avoid leaving diff content on disk.
 7. Analyze the feedback:
    - Fix **CRITICAL** issues immediately
    - Note **WARNING**s and fix if straightforward
@@ -206,7 +214,7 @@ Maximum **3 iterations** per failing command. If still failing after 3 attempts,
 
 ---
 
-## Phase 5: PRESENT
+## Phase 6: PRESENT
 
 Present to the user:
 

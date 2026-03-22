@@ -24,7 +24,7 @@ A Claude Code skill that turns any task into a systematic, quality-controlled wo
       |
       v
 +-----------+
-| 4. BUILD  |  Subagents implement the approved plan
+| 4. IMPL   |  Subagents implement the approved plan
 +-----+-----+
       |
       v
@@ -124,6 +124,10 @@ This lets you use fast local models for plan review and more capable cloud model
 | `maxIterations` | number | 3 | Max QC fix iterations |
 
 Without a config file, the skill auto-detects available agents and project type.
+
+## Privacy Note
+
+When using cloud-based agents (Gemini, Codex), the skill sends your implementation plans and code diffs to those external services for review. If your codebase contains proprietary or sensitive code, consider using a local agent like Ollama instead, or review the prompts being sent by checking the temp files before they are submitted.
 
 ## Requirements
 
