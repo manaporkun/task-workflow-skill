@@ -40,13 +40,26 @@ A Claude Code skill that turns any task into a systematic, quality-controlled wo
 
 ## Installation
 
-### Option 1: Plugin command (from within Claude Code)
+### Option 1: Plugin marketplace (recommended)
+
+From within Claude Code, add the marketplace and install the plugin:
 
 ```
-/plugin install github:manaporkun/task-workflow-skill
+/plugin marketplace add manaporkun/task-workflow-skill
+/plugin install task-workflow-skill@task-workflow-skill
+/reload-plugins
 ```
 
-### Option 2: Symlink installer
+The skill will be available as `/task-workflow-skill:do`. To update later, run `/plugin marketplace update task-workflow-skill`.
+
+### Option 2: Direct loading (development)
+
+```bash
+git clone https://github.com/manaporkun/task-workflow-skill.git
+claude --plugin-dir ./task-workflow-skill
+```
+
+### Option 3: Symlink installer
 
 ```bash
 git clone https://github.com/manaporkun/task-workflow-skill.git ~/Documents/Projects/task-workflow-skill
@@ -54,9 +67,9 @@ cd ~/Documents/Projects/task-workflow-skill
 ./install.sh
 ```
 
-This creates a symlink from `~/.claude/skills/do` to the repo's `skills/do/` directory, so updates via `git pull` take effect immediately.
+This creates a symlink from `~/.claude/skills/do` to the repo's `skills/do/` directory, so updates via `git pull` take effect immediately. The skill is available as `/do`.
 
-### Option 3: Manual copy
+### Option 4: Manual copy
 
 Copy the `skills/do/` directory into `~/.claude/skills/` (user-wide) or `.claude/skills/` (project-scoped). Claude Code detects skills automatically.
 
@@ -171,7 +184,8 @@ For other project types, specify QC commands in `.claude/do-config.json`.
 ```
 task-workflow-skill/
 ├── .claude-plugin/
-│   └── plugin.json           # Plugin manifest
+│   ├── plugin.json           # Plugin manifest
+│   └── marketplace.json      # Marketplace catalog
 ├── skills/
 │   └── do/
 │       ├── SKILL.md          # Main workflow orchestrator
