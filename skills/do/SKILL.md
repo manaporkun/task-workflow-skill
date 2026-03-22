@@ -44,6 +44,10 @@ Agent availability is cached at `~/.claude/do-env.json` to avoid redundant `whic
      Use only the agent names that were found. Use the Bash tool to write the file, e.g.:
      `sh -c 'echo "{\"agents\":[\"gemini\",\"codex\"],\"ollamaModels\":[],\"detectedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > ~/.claude/do-env.json'`
 
+### Platform detection (always runs)
+
+Run `uname -s` to record the platform (e.g. `Darwin` or `Linux`). This informs command compatibility (e.g. mktemp behavior, available utilities).
+
 ### Project detection (always runs)
 
 These are project-specific and must be checked every time:
@@ -118,21 +122,24 @@ If no config file exists, auto-detect everything from the environment output abo
 
 > If no external agent is available, skip to Phase 3.
 
+**Small-plan threshold**: Before proceeding, check if the plan modifies only **1 file** and has **2 or fewer implementation steps**. If so, skip external review with a note: "Plan is small (1 file, ≤2 steps) — skipping external review." and proceed directly to Phase 3.
+
 1. Read the prompt template from `${CLAUDE_SKILL_DIR}/prompts/plan-review.md` (`$CLAUDE_SKILL_DIR` is set by Claude Code to the skill's directory at runtime)
 2. Build the full review prompt by replacing the template placeholders:
    - `{TASK}` → the task description ($ARGUMENTS)
    - `{PLAN}` → the full plan content
    - `{CONTEXT}` → brief codebase context (key file paths, interfaces involved)
 3. Create a temp file and write the assembled prompt to it:
-   `PLAN_REVIEW_FILE=$(mktemp /tmp/do-plan-review-XXXXXX.md)` then write the prompt content to `$PLAN_REVIEW_FILE`
+   `PLAN_REVIEW_FILE=$(mktemp /tmp/do-plan-review-XXXXXX)` then write the prompt content to `$PLAN_REVIEW_FILE`
 4. Select the agent: use the first available entry from `agents.planReview` in config, or fall back to the first detected agent.
-5. Call the selected agent (with a 120-second timeout):
-   - **Gemini**: `timeout 120 sh -c 'cat $PLAN_REVIEW_FILE | gemini -p "Review the implementation plan provided via stdin. Respond in plain text." -o text'`
-   - **Codex**: `timeout 120 sh -c 'cat $PLAN_REVIEW_FILE | codex exec -q -'`
-   - **Ollama**: `timeout 120 sh -c 'cat $PLAN_REVIEW_FILE | ollama run <model>'` — replace `<model>` with the model from the agent string (e.g. `ollama:qwen2.5-coder` → `qwen2.5-coder`)
+5. Call the selected agent using the Bash tool with `timeout: 120000` (120 seconds):
+   - **Gemini**: `cat $PLAN_REVIEW_FILE | gemini -p "Review the implementation plan provided via stdin. Respond in plain text." -o text`
+   - **Codex**: `cat $PLAN_REVIEW_FILE | codex exec -q -`
+   - **Ollama**: `cat $PLAN_REVIEW_FILE | ollama run <model>` — replace `<model>` with the model from the agent string (e.g. `ollama:qwen2.5-coder` → `qwen2.5-coder`)
    - **Custom**: If `agentCommands` defines a command for this agent, use it with `{file}` replaced by `$PLAN_REVIEW_FILE` and `{model}` replaced by the model name
+   - Use the Bash tool's `timeout` parameter instead of the `timeout` shell command (which is unavailable on macOS)
    - If the agent call times out or fails, try the next agent in the list. If all fail, note the failure and continue to the checkpoint.
-6. Clean up: `rm -f $PLAN_REVIEW_FILE` — **always run this**, even if the agent call failed or timed out, to avoid leaving prompt content on disk.
+6. Clean up: `rm -f $PLAN_REVIEW_FILE` — **this MUST be the very next Bash command after the agent call**, regardless of whether it succeeded, failed, or timed out. Do not process the agent output or perform any other action before running cleanup. This prevents prompt content from remaining on disk if subsequent steps fail.
 7. Capture and analyze the feedback
 8. If the feedback suggests significant improvements:
    - Revise the plan
@@ -172,11 +179,15 @@ Present to the user:
 
 ### 5a — Automated Testing
 
-Run QC commands based on project type (or config overrides):
+Run QC commands based on project type (or config overrides). **Before running any auto-detected command, verify it exists**:
+
+- **Node.js**: Run `node -e "process.exit(require('./package.json').scripts?.test ? 0 : 1)"` before attempting `npm test`. Only run `npm run build` if a `build` script exists. Only run `npx playwright test` if `playwright` is in dependencies.
+- **Python/Go/Rust/iOS**: Check the relevant tool is installed (`which pytest`, `which go`, etc.) before running.
+- **If no QC commands are applicable or available**: Skip automated testing with a note: "No applicable QC commands detected — skipping automated testing." and proceed to 5b.
 
 | Type | Commands |
 |---|---|
-| Node.js | `npm test`, `npx playwright test` (if installed), `npm run build` |
+| Node.js | `npm test` (if test script exists), `npx playwright test` (if installed), `npm run build` (if build script exists) |
 | iOS/macOS | `xcodebuild -scheme <scheme> -destination 'platform=iOS Simulator,name=iPhone 16' build` |
 | Python | `pytest`, `ruff check .` |
 | Go | `go test ./...`, `go vet ./...` |
@@ -201,10 +212,10 @@ Maximum **3 iterations** per failing command. If still failing after 3 attempts,
    - `{PLAN}` → the approved plan content
    - `{DIFF}` → the full diff output
 4. Create a temp file and write the review prompt to it:
-   `CODE_REVIEW_FILE=$(mktemp /tmp/do-code-review-XXXXXX.md)` then write the prompt content to `$CODE_REVIEW_FILE`
+   `CODE_REVIEW_FILE=$(mktemp /tmp/do-code-review-XXXXXX)` then write the prompt content to `$CODE_REVIEW_FILE`
 5. Select the agent: use the first available entry from `agents.codeReview` in config, or fall back to the first detected agent.
 6. Call the selected agent (same invocation patterns and timeout as Phase 2, using `$CODE_REVIEW_FILE` as the temp file). For **Codex** specifically, you may also try `codex review` as an alternative.
-   Clean up after the agent call: `rm -f $CODE_REVIEW_FILE` — **always run this**, even if the agent call failed or timed out, to avoid leaving diff content on disk.
+   Clean up: `rm -f $CODE_REVIEW_FILE` — **this MUST be the very next Bash command after the agent call**, regardless of outcome. Do not process output before cleanup.
 7. Analyze the feedback:
    - Fix **CRITICAL** issues immediately
    - Note **WARNING**s and fix if straightforward
