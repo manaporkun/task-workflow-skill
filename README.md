@@ -40,13 +40,13 @@ A Claude Code skill that turns any task into a systematic, quality-controlled wo
 
 ## Installation
 
-### As a Claude Code Plugin
+### Option 1: Plugin command (from within Claude Code)
 
-```bash
-claude plugin add manaporkun/task-workflow-skill
+```
+/plugin install github:manaporkun/task-workflow-skill
 ```
 
-### Direct (symlink)
+### Option 2: Symlink installer
 
 ```bash
 git clone https://github.com/manaporkun/task-workflow-skill.git ~/Documents/Projects/task-workflow-skill
@@ -55,6 +55,10 @@ cd ~/Documents/Projects/task-workflow-skill
 ```
 
 This creates a symlink from `~/.claude/skills/do` to the repo's `skills/do/` directory, so updates via `git pull` take effect immediately.
+
+### Option 3: Manual copy
+
+Copy the `skills/do/` directory into `~/.claude/skills/` (user-wide) or `.claude/skills/` (project-scoped). Claude Code detects skills automatically.
 
 ## Usage
 
