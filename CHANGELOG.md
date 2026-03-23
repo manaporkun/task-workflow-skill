@@ -2,23 +2,28 @@
 
 ## [1.3.0](https://github.com/manaporkun/task-workflow-skill/compare/v1.2.0...v1.3.0) (2026-03-23)
 
-
 ### Features
 
 * Add test suite, CI, and improve agent timeout reliability ([6678165](https://github.com/manaporkun/task-workflow-skill/commit/6678165dea6365d00092278dfb018cf470c35850))
-
+* **OpenRouter API integration** — Real integration via `scripts/openrouter.sh` using curl and the OpenRouter REST API. Detected via `OPENROUTER_API_KEY` env var instead of a non-existent CLI binary. Supports model selection with `"openrouter:<model>"` format (default: `google/gemini-2.0-flash-001`).
 
 ### Bug Fixes
 
 * Bash arithmetic compatibility with set -e in test.sh ([9f1feee](https://github.com/manaporkun/task-workflow-skill/commit/9f1feeeeb4d5d98608c533f5a755b452387af158))
 
+### Removed
+
+* **Antigravity agent** — Removed all references. Google Antigravity is an IDE (not a CLI) and has no headless/non-interactive mode for piping prompts.
+
 ## [1.2.0] - 2026-03-23
+
+### Fixed
+
+- **Marketplace recursion risk** — Removed in-repo `.claude-plugin/marketplace.json` and switched docs to use a separate marketplace catalog repository (`manaporkun/claude-plugin-marketplace`) to avoid recursive cache path expansion (`ENAMETOOLONG`) during plugin install.
 
 ### Security
 
 - **Trust warning for `agentCommands`** — Added security note in SKILL.md and README warning that custom commands execute in the user's shell. Only use in trusted projects.
-
-### Fixed
 
 - **Phase reference in README** — `agents.codeReview` config field now correctly references Phase 5b (was Phase 4).
 

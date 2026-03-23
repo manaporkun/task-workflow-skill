@@ -14,7 +14,7 @@ A Claude Code skill that turns any task into a systematic, quality-controlled wo
       |
       v
 +-----------+
-| 2. ANALYZE|  External agent (Gemini/Codex/Ollama) reviews the plan
+| 2. ANALYZE|  External agent (Gemini/Codex/Ollama/OpenRouter) reviews the plan
 +-----+-----+
       |
       v
@@ -40,17 +40,25 @@ A Claude Code skill that turns any task into a systematic, quality-controlled wo
 
 ## Installation
 
-### Option 1: Plugin marketplace (recommended)
+### Option 1: Plugin marketplace (separate catalog repo)
 
-From within Claude Code, add the marketplace and install the plugin:
+From within Claude Code, add a dedicated marketplace catalog repo (separate from this plugin source repo), then install:
 
 ```
-/plugin marketplace add manaporkun/task-workflow-skill
-/plugin install task-workflow-skill@task-workflow-skill
+/plugin marketplace add manaporkun/claude-plugin-marketplace
+/plugin install task-workflow-skill
 /reload-plugins
 ```
 
 The skill will be available as `/task-workflow-skill:do`. To update later, run `/plugin marketplace update task-workflow-skill`.
+
+If you previously added `manaporkun/task-workflow-skill` as a marketplace, remove stale cache entries before reinstalling:
+
+```bash
+rm -rf ~/.claude/plugins/cache/*task-workflow-skill* \
+       ~/.claude/plugins/installed/*task-workflow-skill* \
+       ~/.claude/plugins/marketplaces/manaporkun-task-workflow-skill*
+```
 
 ### Option 2: Direct loading (development)
 
@@ -83,7 +91,7 @@ Copy the `skills/do/` directory into `~/.claude/skills/` (user-wide) or `.claude
 
 ### Environment Cache
 
-The skill caches detected agent availability (Gemini, Codex, Ollama) at `~/.claude/do-env.json` so it doesn't re-run `which` checks on every invocation. The cache is created automatically on first run.
+The skill caches detected agent availability (Gemini, Codex, Ollama, OpenRouter) at `~/.claude/do-env.json` so it doesn't re-run detection checks on every invocation. The cache is created automatically on first run.
 
 To force a re-detection (e.g. after installing or removing an agent CLI):
 
@@ -107,7 +115,8 @@ Optionally create `.claude/do-config.json` in your project root:
   "agentCommands": {
     "gemini": "cat {file} | gemini -p \"Review the content via stdin.\" -o text",
     "codex": "cat {file} | codex exec -q -",
-    "ollama": "cat {file} | ollama run {model}"
+    "ollama": "cat {file} | ollama run {model}",
+    "openrouter": "${CLAUDE_SKILL_DIR}/scripts/openrouter.sh {file} {model}"
   },
   "qc": {
     "test": "npm test",
@@ -128,6 +137,8 @@ Agent format:
 - `"gemini"` — Gemini CLI (cloud)
 - `"codex"` — Codex CLI (cloud)
 - `"ollama:<model>"` — Ollama with a local model (e.g. `"ollama:qwen2.5-coder"`)
+- `"openrouter"` — OpenRouter API with default model (cloud)
+- `"openrouter:<model>"` — OpenRouter with a specific model (e.g. `"openrouter:anthropic/claude-sonnet-4"`)
 
 This lets you use fast local models for plan review and more capable cloud models for code review.
 
@@ -152,7 +163,7 @@ Without a config file, the skill auto-detects available agents and project type.
 
 ## Privacy Note
 
-When using cloud-based agents (Gemini, Codex), the skill sends your implementation plans and code diffs to those external services for review. If your codebase contains proprietary or sensitive code, consider using a local agent like Ollama instead, or review the prompts being sent by checking the temp files before they are submitted.
+When using cloud-based agents (Gemini, Codex, OpenRouter), the skill sends your implementation plans and code diffs to those external services for review. If your codebase contains proprietary or sensitive code, consider using a local agent like Ollama instead, or review the prompts being sent by checking the temp files before they are submitted.
 
 ## Requirements
 
@@ -164,6 +175,7 @@ When using cloud-based agents (Gemini, Codex), the skill sends your implementati
 | [Gemini CLI](https://github.com/google-gemini/gemini-cli) | `npm i -g @google/gemini-cli` | Cloud | Deep analysis, code review |
 | [Codex CLI](https://github.com/openai/codex-cli) | `brew install codex` | Cloud | Code review, built-in `codex review` |
 | [Ollama](https://ollama.com) | `brew install ollama` | Local | Fast plan review, small tasks |
+| [OpenRouter](https://openrouter.ai/) | Set `OPENROUTER_API_KEY` env var | Cloud | Wide variety of models via API |
 
 ### Recommended Ollama Models for Code Review
 
@@ -192,14 +204,15 @@ For other project types, specify QC commands in `.claude/do-config.json`.
 ```
 task-workflow-skill/
 ├── .claude-plugin/
-│   ├── plugin.json           # Plugin manifest
-│   └── marketplace.json      # Marketplace catalog
+│   └── plugin.json           # Plugin manifest
 ├── skills/
 │   └── do/
 │       ├── SKILL.md          # Main workflow orchestrator
-│       └── prompts/
-│           ├── plan-review.md    # Template: external agent plan review
-│           └── code-review.md    # Template: external agent code review
+│       ├── prompts/
+│       │   ├── plan-review.md    # Template: external agent plan review
+│       │   └── code-review.md    # Template: external agent code review
+│       └── scripts/
+│           └── openrouter.sh     # OpenRouter API integration script
 ├── install.sh                # Symlink installer for direct use
 ├── CHANGELOG.md              # Version history
 ├── README.md                 # This file
@@ -209,7 +222,7 @@ task-workflow-skill/
 ## How It Works
 
 1. **Plan**: Claude researches the codebase and creates a step-by-step plan, saved to `.claude/plans/`
-2. **Analyze**: The plan is sent to an external agent (Gemini/Codex/Ollama) for independent review. If issues are found, the plan is revised.
+2. **Analyze**: The plan is sent to an external agent (Gemini/Codex/Ollama/OpenRouter) for independent review. If issues are found, the plan is revised.
 3. **Approve**: You review the plan and external feedback, then approve.
 4. **Implement**: Claude spawns subagents to implement the plan in isolated contexts.
 5. **QC**: Automated tests/builds run first. Then an external agent reviews the code diff for plan compliance and quality.

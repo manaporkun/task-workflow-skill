@@ -31,16 +31,17 @@ Agent availability is cached at `~/.claude/do-env.json` to avoid redundant `whic
 1. **Read cache**: `cat ~/.claude/do-env.json 2>/dev/null`
 2. **If cache exists and is valid JSON**:
    - Use the `agents` array and `ollamaModels` array from the cache
-   - **Validate** (only if `agents` is non-empty): run `which <first-agent-in-list> 2>/dev/null` to confirm it's still installed. If validation fails or `agents` is empty, discard cache and proceed to step 3.
+   - **Validate** (only if `agents` is non-empty): for CLI-based agents (`gemini`, `codex`, `ollama`), run `which <agent> 2>/dev/null` to confirm it's still installed. For `openrouter`, check `[ -n "${OPENROUTER_API_KEY:-}" ]`. If validation fails for the first agent in the list or `agents` is empty, discard cache and proceed to step 3.
 3. **If cache is missing or invalid** — run full detection:
    - `for cmd in gemini codex ollama; do which $cmd 2>/dev/null && echo "$cmd: found" || echo "$cmd: not found"; done`
+   - **OpenRouter**: detected via environment variable, not a CLI binary. Check: `[ -n "${OPENROUTER_API_KEY:-}" ] && echo "openrouter: found" || echo "openrouter: not found"`
    - If ollama was found: `ollama list 2>/dev/null`
    - **Save cache**: write a JSON file to `~/.claude/do-env.json` with this structure:
      ```json
-     { "agents": ["gemini", "codex"], "ollamaModels": ["qwen2.5-coder"], "detectedAt": "2026-03-22T14:25:00Z" }
+     { "agents": ["gemini", "codex", "openrouter"], "ollamaModels": ["qwen2.5-coder"], "detectedAt": "2026-03-22T14:25:00Z" }
      ```
      Use only the agent names that were found. Use the Bash tool to write the file, e.g.:
-     `sh -c 'echo "{\"agents\":[\"gemini\",\"codex\"],\"ollamaModels\":[],\"detectedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > ~/.claude/do-env.json'`
+     `sh -c 'echo "{\"agents\":[\"gemini\",\"codex\",\"openrouter\"],\"ollamaModels\":[],\"detectedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > ~/.claude/do-env.json'`
 
 ### Platform detection (always runs)
 
@@ -60,7 +61,7 @@ Record which agents are available and proceed. If no external agents are found, 
 If `.claude/do-config.json` exists, validate and use its values:
 - `configVersion` must be `1` if present (reserved for future schema changes). If missing, default to `1`.
 - `agents` must be an object with array values (e.g. `{"planReview": [...], "codeReview": [...]}`), not a bare string or array
-- Each agent entry must match the format `"gemini"`, `"codex"`, or `"ollama:<model>"`
+- Each agent entry must match the format `"gemini"`, `"codex"`, `"ollama:<model>"`, `"openrouter"`, or `"openrouter:<model>"`
 - `maxIterations` and `maxCodeReviewIterations` must be positive integers if present
 - `skipReviewThreshold` must be an object with `maxFiles` and `maxSteps` as positive integers if present
 - If the config is malformed, warn the user and fall back to auto-detection
@@ -77,7 +78,8 @@ Schema:
   "agentCommands": {
     "gemini": "cat {file} | gemini -p \"Review the content provided via stdin. Respond in plain text.\" -o text",
     "codex": "cat {file} | codex exec -q -",
-    "ollama": "cat {file} | ollama run {model}"
+    "ollama": "cat {file} | ollama run {model}",
+    "openrouter": "${CLAUDE_SKILL_DIR}/scripts/openrouter.sh {file} {model}"
   },
   "qc": {
     "test": "npm test",
@@ -98,6 +100,8 @@ Agent format:
 - `"gemini"` — Gemini CLI
 - `"codex"` — Codex CLI
 - `"ollama:<model>"` — Ollama with a specific model (e.g. `"ollama:qwen2.5-coder"`)
+- `"openrouter"` — OpenRouter API (default model: `google/gemini-2.0-flash-001`)
+- `"openrouter:<model>"` — OpenRouter with a specific model (e.g. `"openrouter:anthropic/claude-sonnet-4"`)
 
 If `agents` is omitted, all phases use the first available agent detected in the environment.
 The `agentCommands` field is optional — if omitted, use the default commands listed in the Analyze phase.
@@ -142,6 +146,7 @@ If no config file exists, auto-detect everything from the environment output abo
    - **Gemini**: `cat $PLAN_REVIEW_FILE | gemini -p "Review the implementation plan provided via stdin. Respond in plain text." -o text`
    - **Codex**: `cat $PLAN_REVIEW_FILE | codex exec -q -`
    - **Ollama**: `cat $PLAN_REVIEW_FILE | ollama run <model>` — replace `<model>` with the model from the agent string (e.g. `ollama:qwen2.5-coder` → `qwen2.5-coder`)
+   - **OpenRouter**: `${CLAUDE_SKILL_DIR}/scripts/openrouter.sh $PLAN_REVIEW_FILE <model>` — replace `<model>` with the model from the agent string (e.g. `openrouter:anthropic/claude-sonnet-4` → `anthropic/claude-sonnet-4`). If no model is specified, omit the second argument to use the default (`google/gemini-2.0-flash-001`). Requires `OPENROUTER_API_KEY` env var.
    - **Custom**: If `agentCommands` defines a command for this agent, use it with `{file}` replaced by `$PLAN_REVIEW_FILE` and `{model}` replaced by the model name
    - Use the Bash tool's `timeout` parameter instead of the `timeout` shell command (which is unavailable on macOS)
    - If all agents fail or time out, note the failure and continue to the checkpoint without external review.
