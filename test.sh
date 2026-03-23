@@ -127,8 +127,8 @@ fi
 
 # Test: Config schemas match between SKILL.md and README.md
 echo "[8] Config schemas consistent between SKILL.md and README.md"
-SKILL_FIELDS=$(grep -oE '"(configVersion|maxIterations|maxCodeReviewIterations|skipReviewThreshold)"' "$SCRIPT_DIR/skills/do/SKILL.md" | sort -u)
-README_FIELDS=$(grep -oE '"(configVersion|maxIterations|maxCodeReviewIterations|skipReviewThreshold)"' "$SCRIPT_DIR/README.md" | sort -u)
+SKILL_FIELDS=$(grep -oE '(configVersion|maxIterations|maxCodeReviewIterations|skipReviewThreshold)' "$SCRIPT_DIR/skills/do/SKILL.md" | sort -u)
+README_FIELDS=$(grep -oE '(configVersion|maxIterations|maxCodeReviewIterations|skipReviewThreshold)' "$SCRIPT_DIR/README.md" | sort -u)
 if [ "$SKILL_FIELDS" = "$README_FIELDS" ]; then
   pass "config fields consistent"
 else
