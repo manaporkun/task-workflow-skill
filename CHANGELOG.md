@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.3.0](https://github.com/manaporkun/task-workflow-skill/compare/v1.2.0...v1.3.0) (2026-03-23)
+
+
+### Features
+
+* Add test suite, CI, and improve agent timeout reliability ([6678165](https://github.com/manaporkun/task-workflow-skill/commit/6678165dea6365d00092278dfb018cf470c35850))
+
+
+### Bug Fixes
+
+* Bash arithmetic compatibility with set -e in test.sh ([9f1feee](https://github.com/manaporkun/task-workflow-skill/commit/9f1feeeeb4d5d98608c533f5a755b452387af158))
+
 ## [1.2.0] - 2026-03-23
 
 ### Security
