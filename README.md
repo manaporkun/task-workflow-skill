@@ -1,48 +1,56 @@
 # /do — Structured Task Workflow
 
+[![Test](https://github.com/manaporkun/task-workflow-skill/actions/workflows/test.yml/badge.svg)](https://github.com/manaporkun/task-workflow-skill/actions/workflows/test.yml)
+[![Release](https://github.com/manaporkun/task-workflow-skill/actions/workflows/release.yml/badge.svg)](https://github.com/manaporkun/task-workflow-skill/actions/workflows/release.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+![Version](https://img.shields.io/badge/version-1.4.0-green)
+
 A Claude Code skill that turns any task into a systematic, quality-controlled workflow with external agent review.
 
-## Workflow
+**Plan** an implementation, get it **reviewed by another AI agent**, get your **approval**, **implement** with subagents, run **automated QC**, then **present** the results.
+
+## Quick Start
 
 ```
-/do <task description>
-     |
-     v
-+-----------+
-| 1. PLAN   |  Research codebase, create implementation plan
-+-----+-----+
-      |
-      v
-+-----------+
-| 2. ANALYZE|  External agent reviews the plan
-+-----+-----+
-      |
-      v
-+-----------+
-| 3. APPROVE|  User reviews plan + analysis, approves
-+-----+-----+
-      |
-      v
-+-----------+
-| 4. IMPL   |  Subagents implement the approved plan
-+-----+-----+
-      |
-      v
-+-----------+
-| 5. QC     |  Automated tests + external code review
-+-----+-----+
-      |
-      v
-+-----------+
-| 6. PRESENT|  Summary of changes, QC results, final approval
-+-----------+
+/do Add a dark mode toggle to the settings page
+```
+
+That's it. The skill auto-detects your project type and any available review agents. No configuration needed.
+
+## How It Works
+
+| Phase | What happens |
+|---|---|
+| **1. Plan** | Claude researches the codebase and creates a step-by-step implementation plan |
+| **2. Analyze** | An external agent (Gemini, Codex, Claude, etc.) independently reviews the plan |
+| **3. Approve** | You review the plan + feedback and approve, reject, or request changes |
+| **4. Implement** | Claude spawns subagents to implement the approved plan in parallel |
+| **5. QC** | Automated tests/builds run, then an external agent reviews the code diff |
+| **6. Present** | Summary of changes, QC results, and outstanding items for final approval |
+
+## Supported Agents
+
+The skill can use any of these agents for plan and code review. All are optional — the skill detects what's available and falls back gracefully.
+
+| Agent | Install | Type | Detection |
+|---|---|---|---|
+| [Gemini CLI](https://github.com/google-gemini/gemini-cli) | `npm i -g @google/gemini-cli` | Cloud | `which gemini` |
+| [Codex CLI](https://github.com/openai/codex-cli) | `brew install codex` | Cloud | `which codex` |
+| [Ollama](https://ollama.com) | `brew install ollama` | Local | `which ollama` |
+| [OpenRouter](https://openrouter.ai/) | Set `OPENROUTER_API_KEY` | Cloud | env var |
+| [Claude Code](https://claude.com/claude-code) | `npm i -g @anthropic-ai/claude-code` | Cloud | `which claude` |
+| [Aider](https://aider.chat) | `pip install aider-chat` | Cloud/Local | `which aider` |
+| OpenAI-compatible | Set `OPENAI_API_KEY` | Cloud/Local | env var |
+
+Agent availability is cached at `~/.claude/do-env.json`. To force re-detection:
+
+```
+/do --refresh-env <task description>
 ```
 
 ## Installation
 
-### Option 1: Plugin marketplace (separate catalog repo)
-
-From within Claude Code, add a dedicated marketplace catalog repo (separate from this plugin source repo), then install:
+### Plugin marketplace
 
 ```
 /plugin marketplace add manaporkun/claude-plugin-marketplace
@@ -50,9 +58,115 @@ From within Claude Code, add a dedicated marketplace catalog repo (separate from
 /reload-plugins
 ```
 
-The skill will be available as `/task-workflow-skill:do`. To update later, run `/plugin marketplace update task-workflow-skill`.
+The skill is available as `/task-workflow-skill:do`.
 
-If you previously added `manaporkun/task-workflow-skill` as a marketplace, remove stale cache entries before reinstalling:
+### Symlink installer
+
+```bash
+git clone https://github.com/manaporkun/task-workflow-skill.git
+cd task-workflow-skill && ./install.sh
+```
+
+Creates a symlink so `git pull` updates take effect immediately. The skill is available as `/do`.
+
+### Other options
+
+- **Direct loading**: `claude --plugin-dir ./task-workflow-skill`
+- **Manual copy**: Copy `skills/do/` into `~/.claude/skills/` (user-wide) or `.claude/skills/` (project-scoped)
+
+## Configuration
+
+The skill works out of the box with zero configuration. For advanced control, create `.claude/do-config.json` in your project root.
+
+### Agent routing
+
+Control which agent reviews each phase:
+
+```json
+{
+  "agents": {
+    "planReview": ["ollama:qwen2.5-coder", "gemini"],
+    "codeReview": ["gemini", "codex"]
+  }
+}
+```
+
+Each entry is an ordered fallback list — the skill tries the first available agent, then the next.
+
+**Agent format:**
+
+| Format | Example | Description |
+|---|---|---|
+| `"gemini"` | | Gemini CLI |
+| `"codex"` | | Codex CLI |
+| `"claude"` | | Claude Code headless mode |
+| `"aider"` | | Aider dry-run review |
+| `"ollama:<model>"` | `"ollama:qwen2.5-coder"` | Ollama with a specific model |
+| `"openrouter:<model>"` | `"openrouter:anthropic/claude-sonnet-4"` | OpenRouter with a specific model |
+| `"openai:<model>"` | `"openai:gpt-4.1-mini"` | Any OpenAI-compatible API |
+
+Agents without `:<model>` use their default model. `openrouter` defaults to `google/gemini-2.0-flash-001`, `openai` defaults to `gpt-4o`.
+
+### QC commands
+
+Override auto-detected test/build/lint commands:
+
+```json
+{
+  "qc": {
+    "test": "npm test",
+    "build": "npm run build",
+    "lint": "eslint ."
+  }
+}
+```
+
+### All config fields
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `configVersion` | number | `1` | Schema version for forward compatibility |
+| `agents.planReview` | string[] | auto-detect | Ordered agent list for plan review |
+| `agents.codeReview` | string[] | auto-detect | Ordered agent list for code review |
+| `agentCommands` | object | built-in | Custom shell commands per agent (`{file}` = prompt path, `{model}` = model name) |
+| `qc.test` | string | auto | Test command |
+| `qc.build` | string | auto | Build command |
+| `qc.lint` | string | auto | Lint command |
+| `maxIterations` | number | `3` | Max QC fix iterations per failing command |
+| `maxCodeReviewIterations` | number | `2` | Max external code review rounds |
+| `skipReviewThreshold` | object | `{"maxFiles":1,"maxSteps":2}` | Skip external plan review for small plans |
+
+> **Security note**: Custom `agentCommands` execute directly in your shell. Only use this field in projects you trust — a malicious `.claude/do-config.json` in a cloned repo could run arbitrary commands when `/do` is invoked.
+
+## Supported Project Types
+
+Auto-detection for: **Node.js** (package.json), **iOS/macOS** (Podfile, *.xcodeproj), **Python** (pyproject.toml, requirements.txt), **Go** (go.mod), **Rust** (Cargo.toml). For other project types, specify QC commands in config.
+
+## Privacy
+
+When using cloud-based agents, the skill sends your implementation plans and code diffs to those external services for review. For sensitive codebases, use a local agent like Ollama or Aider with a local model.
+
+## File Structure
+
+```
+task-workflow-skill/
+├── skills/do/
+│   ├── SKILL.md              # Workflow orchestrator
+│   ├── prompts/
+│   │   ├── plan-review.md    # Plan review prompt template
+│   │   └── code-review.md    # Code review prompt template
+│   └── scripts/
+│       ├── openrouter.sh         # OpenRouter API integration
+│       └── openai-compatible.sh  # OpenAI-compatible API integration
+├── .claude-plugin/plugin.json    # Plugin manifest
+├── install.sh                    # Symlink installer
+├── CHANGELOG.md
+└── LICENSE
+```
+
+## Troubleshooting
+
+**Stale plugin cache**: If you previously added `manaporkun/task-workflow-skill` as a marketplace (instead of the separate catalog repo), clear stale entries:
 
 ```bash
 rm -rf ~/.claude/plugins/cache/*task-workflow-skill* \
@@ -60,184 +174,9 @@ rm -rf ~/.claude/plugins/cache/*task-workflow-skill* \
        ~/.claude/plugins/marketplaces/manaporkun-task-workflow-skill*
 ```
 
-### Option 2: Direct loading (development)
+**Agent not detected**: Run `/do --refresh-env <task>` or delete `~/.claude/do-env.json`.
 
-```bash
-git clone https://github.com/manaporkun/task-workflow-skill.git
-claude --plugin-dir ./task-workflow-skill
-```
-
-### Option 3: Symlink installer
-
-```bash
-git clone https://github.com/manaporkun/task-workflow-skill.git ~/Documents/Projects/task-workflow-skill
-cd ~/Documents/Projects/task-workflow-skill
-./install.sh
-```
-
-This creates a symlink from `~/.claude/skills/do` to the repo's `skills/do/` directory, so updates via `git pull` take effect immediately. The skill is available as `/do`.
-
-### Option 4: Manual copy
-
-Copy the `skills/do/` directory into `~/.claude/skills/` (user-wide) or `.claude/skills/` (project-scoped). Claude Code detects skills automatically.
-
-## Usage
-
-```
-/do Add a dark mode toggle to the settings page
-/do Fix the race condition in the WebSocket handler
-/do Refactor the auth middleware to use JWT
-```
-
-### Environment Cache
-
-The skill caches detected agent availability at `~/.claude/do-env.json` so it doesn't re-run detection checks on every invocation. The cache is created automatically on first run.
-
-To force a re-detection (e.g. after installing or removing an agent CLI):
-
-```
-/do --refresh-env <task description>
-```
-
-Or delete the cache manually: `rm ~/.claude/do-env.json`
-
-## Configuration
-
-Optionally create `.claude/do-config.json` in your project root:
-
-```json
-{
-  "configVersion": 1,
-  "agents": {
-    "planReview": ["ollama:qwen2.5-coder", "gemini"],
-    "codeReview": ["gemini", "codex"]
-  },
-  "agentCommands": {
-    "gemini": "cat {file} | gemini -p \"Review the content via stdin.\" -o text",
-    "codex": "cat {file} | codex exec -q -",
-    "ollama": "cat {file} | ollama run {model}",
-    "openrouter": "${CLAUDE_SKILL_DIR}/scripts/openrouter.sh {file} {model}",
-    "claude": "cat {file} | claude -p --bare --output-format text --allowedTools \"Read\"",
-    "aider": "aider --no-auto-commits --no-git --dry-run --yes --message-file {file}",
-    "openai": "${CLAUDE_SKILL_DIR}/scripts/openai-compatible.sh {file} {model}"
-  },
-  "qc": {
-    "test": "npm test",
-    "build": "npm run build",
-    "lint": "eslint ."
-  },
-  "maxIterations": 3,
-  "maxCodeReviewIterations": 2,
-  "skipReviewThreshold": { "maxFiles": 1, "maxSteps": 2 }
-}
-```
-
-### Agent Routing
-
-Each phase can use a different review agent. The `agents` field maps phases to an ordered list of agents — the skill tries the first available and falls back to the next.
-
-Agent format:
-- `"gemini"` — Gemini CLI (cloud)
-- `"codex"` — Codex CLI (cloud)
-- `"ollama:<model>"` — Ollama with a local model (e.g. `"ollama:qwen2.5-coder"`)
-- `"openrouter"` — OpenRouter API with default model (cloud)
-- `"openrouter:<model>"` — OpenRouter with a specific model (e.g. `"openrouter:anthropic/claude-sonnet-4"`)
-- `"claude"` — Claude Code headless mode (cloud)
-- `"aider"` — Aider in dry-run review mode (uses your configured LLM)
-- `"openai"` — Any OpenAI-compatible API with default model (cloud/local)
-- `"openai:<model>"` — OpenAI-compatible API with a specific model (e.g. `"openai:gpt-4.1-mini"`)
-
-This lets you use fast local models for plan review and more capable cloud models for code review.
-
-### Config Fields
-
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `configVersion` | number | 1 | Schema version for forward compatibility |
-| `agents.planReview` | string[] | auto-detect | Ordered agent list for plan review (Phase 2) |
-| `agents.codeReview` | string[] | auto-detect | Ordered agent list for code review (Phase 5b) |
-| `agentCommands` | object | built-in | Custom invocation commands per agent. `{file}` = prompt file path, `{model}` = model name. **See security note below.** |
-| `qc.test` | string | auto | Test command |
-| `qc.build` | string | auto | Build command |
-| `qc.lint` | string | auto | Lint command |
-| `maxIterations` | number | 3 | Max QC fix iterations |
-| `maxCodeReviewIterations` | number | 2 | Max external code review iterations (Phase 5b) |
-| `skipReviewThreshold` | object | `{"maxFiles":1,"maxSteps":2}` | Skip external plan review for small plans |
-
-Without a config file, the skill auto-detects available agents and project type.
-
-> **Security note**: Custom `agentCommands` execute directly in your shell. Only use this field in projects you trust — a malicious `.claude/do-config.json` in a cloned repo could run arbitrary commands when `/do` is invoked.
-
-## Privacy Note
-
-When using cloud-based agents (Gemini, Codex, OpenRouter, Claude Code, OpenAI-compatible), the skill sends your implementation plans and code diffs to those external services for review. If your codebase contains proprietary or sensitive code, consider using a local agent like Ollama or Aider with a local model instead, or review the prompts being sent by checking the temp files before they are submitted.
-
-## Requirements
-
-- Claude Code
-- At least one external agent CLI (optional but recommended):
-
-| Agent | Install | Type | Best for |
-|---|---|---|---|
-| [Gemini CLI](https://github.com/google-gemini/gemini-cli) | `npm i -g @google/gemini-cli` | Cloud | Deep analysis, code review |
-| [Codex CLI](https://github.com/openai/codex-cli) | `brew install codex` | Cloud | Code review, built-in `codex review` |
-| [Ollama](https://ollama.com) | `brew install ollama` | Local | Fast plan review, small tasks |
-| [OpenRouter](https://openrouter.ai/) | Set `OPENROUTER_API_KEY` env var | Cloud | Wide variety of models via API |
-| [Claude Code](https://claude.com/claude-code) | `npm i -g @anthropic-ai/claude-code` | Cloud | Headless review via `claude -p` |
-| [Aider](https://aider.chat) | `pip install aider-chat` | Cloud/Local | Dry-run review, works with any LLM |
-| OpenAI-compatible | Set `OPENAI_API_KEY` env var | Cloud/Local | OpenAI, Azure, LM Studio, any compatible API |
-
-### Recommended Ollama Models for Code Review
-
-| Model | Size | Good for |
-|---|---|---|
-| `qwen2.5-coder` | 7B | Fast plan/code review |
-| `deepseek-coder-v2` | 16B | Thorough code review |
-| `codellama` | 7B | Lightweight review |
-| `llama3` | 8B | General-purpose review |
-
-Install a model: `ollama pull qwen2.5-coder`
-
-## Supported Project Types
-
-Auto-detection for:
-- **Node.js** — package.json
-- **iOS/macOS** — Podfile, *.xcodeproj
-- **Python** — pyproject.toml, requirements.txt
-- **Go** — go.mod
-- **Rust** — Cargo.toml
-
-For other project types, specify QC commands in `.claude/do-config.json`.
-
-## File Structure
-
-```
-task-workflow-skill/
-├── .claude-plugin/
-│   └── plugin.json           # Plugin manifest
-├── skills/
-│   └── do/
-│       ├── SKILL.md          # Main workflow orchestrator
-│       ├── prompts/
-│       │   ├── plan-review.md    # Template: external agent plan review
-│       │   └── code-review.md    # Template: external agent code review
-│       └── scripts/
-│           ├── openrouter.sh         # OpenRouter API integration
-│           └── openai-compatible.sh  # OpenAI-compatible API integration
-├── install.sh                # Symlink installer for direct use
-├── CHANGELOG.md              # Version history
-├── README.md                 # This file
-└── LICENSE
-```
-
-## How It Works
-
-1. **Plan**: Claude researches the codebase and creates a step-by-step plan, saved to `.claude/plans/`
-2. **Analyze**: The plan is sent to an external agent for independent review. If issues are found, the plan is revised.
-3. **Approve**: You review the plan and external feedback, then approve.
-4. **Implement**: Claude spawns subagents to implement the plan in isolated contexts.
-5. **QC**: Automated tests/builds run first. Then an external agent reviews the code diff for plan compliance and quality.
-6. **Present**: A summary of all changes, QC results, and outstanding items is presented for your final approval.
+**OpenRouter/OpenAI not working**: Verify env vars are set (`echo $OPENROUTER_API_KEY`). For non-OpenAI providers, also set `OPENAI_BASE_URL` or `OPENAI_COMPATIBLE_BASE_URL`.
 
 ## License
 
