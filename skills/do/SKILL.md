@@ -33,9 +33,7 @@ Agent availability is cached at `~/.claude/do-env.json` to avoid redundant `whic
    - Use the `agents` array and `ollamaModels` array from the cache
    - **Validate** (only if `agents` is non-empty): run `which <first-agent-in-list> 2>/dev/null` to confirm it's still installed. If validation fails or `agents` is empty, discard cache and proceed to step 3.
 3. **If cache is missing or invalid** — run full detection:
-   - `which gemini 2>/dev/null`
-   - `which codex 2>/dev/null`
-   - `which ollama 2>/dev/null`
+   - `for cmd in gemini codex ollama; do which $cmd 2>/dev/null && echo "$cmd: found" || echo "$cmd: not found"; done`
    - If ollama was found: `ollama list 2>/dev/null`
    - **Save cache**: write a JSON file to `~/.claude/do-env.json` with this structure:
      ```json
@@ -60,15 +58,18 @@ Record which agents are available and proceed. If no external agents are found, 
 ### Configuration
 
 If `.claude/do-config.json` exists, validate and use its values:
+- `configVersion` must be `1` if present (reserved for future schema changes). If missing, default to `1`.
 - `agents` must be an object with array values (e.g. `{"planReview": [...], "codeReview": [...]}`), not a bare string or array
 - Each agent entry must match the format `"gemini"`, `"codex"`, or `"ollama:<model>"`
-- `maxIterations` must be a positive integer if present
+- `maxIterations` and `maxCodeReviewIterations` must be positive integers if present
+- `skipReviewThreshold` must be an object with `maxFiles` and `maxSteps` as positive integers if present
 - If the config is malformed, warn the user and fall back to auto-detection
 
 Schema:
 
 ```json
 {
+  "configVersion": 1,
   "agents": {
     "planReview": ["ollama:qwen2.5-coder", "gemini"],
     "codeReview": ["gemini", "codex"]
@@ -83,7 +84,9 @@ Schema:
     "build": "npm run build",
     "lint": "eslint ."
   },
-  "maxIterations": 3
+  "maxIterations": 3,
+  "maxCodeReviewIterations": 2,
+  "skipReviewThreshold": { "maxFiles": 1, "maxSteps": 2 }
 }
 ```
 
@@ -98,6 +101,9 @@ Agent format:
 
 If `agents` is omitted, all phases use the first available agent detected in the environment.
 The `agentCommands` field is optional — if omitted, use the default commands listed in the Analyze phase.
+
+> **Security note**: Custom `agentCommands` execute directly in your shell. Only use this field in projects you trust — a malicious `.claude/do-config.json` in a cloned repo could run arbitrary commands when `/do` is invoked.
+
 If no config file exists, auto-detect everything from the environment output above.
 
 ---
@@ -122,7 +128,7 @@ If no config file exists, auto-detect everything from the environment output abo
 
 > If no external agent is available, skip to Phase 3.
 
-**Small-plan threshold**: Before proceeding, check if the plan modifies only **1 file** and has **2 or fewer implementation steps**. If so, skip external review with a note: "Plan is small (1 file, ≤2 steps) — skipping external review." and proceed directly to Phase 3.
+**Small-plan threshold**: Before proceeding, check if the plan modifies only **N files** and has **M or fewer implementation steps**, where N and M come from `skipReviewThreshold` in config (default: `maxFiles: 1`, `maxSteps: 2`). If so, skip external review with a note: "Plan is small — skipping external review." and proceed directly to Phase 3.
 
 1. Read the prompt template from `${CLAUDE_SKILL_DIR}/prompts/plan-review.md` (`$CLAUDE_SKILL_DIR` is set by Claude Code to the skill's directory at runtime)
 2. Build the full review prompt by replacing the template placeholders:
@@ -221,7 +227,7 @@ Maximum **3 iterations** per failing command. If still failing after 3 attempts,
    - Note **WARNING**s and fix if straightforward
    - Log **SUGGESTION**s but do not necessarily act on all
 8. Re-run affected tests after fixes
-9. Maximum **2 code review iterations**
+9. Maximum **N code review iterations**, where N comes from `maxCodeReviewIterations` in config (default: 2)
 
 ---
 

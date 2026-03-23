@@ -99,6 +99,7 @@ Optionally create `.claude/do-config.json` in your project root:
 
 ```json
 {
+  "configVersion": 1,
   "agents": {
     "planReview": ["ollama:qwen2.5-coder", "gemini"],
     "codeReview": ["gemini", "codex"]
@@ -113,7 +114,9 @@ Optionally create `.claude/do-config.json` in your project root:
     "build": "npm run build",
     "lint": "eslint ."
   },
-  "maxIterations": 3
+  "maxIterations": 3,
+  "maxCodeReviewIterations": 2,
+  "skipReviewThreshold": { "maxFiles": 1, "maxSteps": 2 }
 }
 ```
 
@@ -132,15 +135,20 @@ This lets you use fast local models for plan review and more capable cloud model
 
 | Field | Type | Default | Description |
 |---|---|---|---|
+| `configVersion` | number | 1 | Schema version for forward compatibility |
 | `agents.planReview` | string[] | auto-detect | Ordered agent list for plan review (Phase 2) |
-| `agents.codeReview` | string[] | auto-detect | Ordered agent list for code review (Phase 4) |
-| `agentCommands` | object | built-in | Custom invocation commands per agent. `{file}` = prompt file path, `{model}` = model name. |
+| `agents.codeReview` | string[] | auto-detect | Ordered agent list for code review (Phase 5b) |
+| `agentCommands` | object | built-in | Custom invocation commands per agent. `{file}` = prompt file path, `{model}` = model name. **See security note below.** |
 | `qc.test` | string | auto | Test command |
 | `qc.build` | string | auto | Build command |
 | `qc.lint` | string | auto | Lint command |
 | `maxIterations` | number | 3 | Max QC fix iterations |
+| `maxCodeReviewIterations` | number | 2 | Max external code review iterations (Phase 5b) |
+| `skipReviewThreshold` | object | `{"maxFiles":1,"maxSteps":2}` | Skip external plan review for small plans |
 
 Without a config file, the skill auto-detects available agents and project type.
+
+> **Security note**: Custom `agentCommands` execute directly in your shell. Only use this field in projects you trust — a malicious `.claude/do-config.json` in a cloned repo could run arbitrary commands when `/do` is invoked.
 
 ## Privacy Note
 

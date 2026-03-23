@@ -10,6 +10,12 @@ if [ ! -d "$SKILL_SRC" ]; then
   exit 1
 fi
 
+if [ ! -d "$HOME/.claude" ]; then
+  echo "Error: ~/.claude/ not found. Is Claude Code installed?" >&2
+  echo "Install Claude Code first: https://docs.anthropic.com/en/docs/claude-code" >&2
+  exit 1
+fi
+
 mkdir -p "$HOME/.claude/skills"
 
 if [ -L "$SKILL_DST" ]; then
