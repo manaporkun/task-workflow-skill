@@ -14,7 +14,7 @@ A Claude Code skill that turns any task into a systematic, quality-controlled wo
       |
       v
 +-----------+
-| 2. ANALYZE|  External agent (Gemini/Codex/Ollama/OpenRouter) reviews the plan
+| 2. ANALYZE|  External agent reviews the plan
 +-----+-----+
       |
       v
@@ -91,7 +91,7 @@ Copy the `skills/do/` directory into `~/.claude/skills/` (user-wide) or `.claude
 
 ### Environment Cache
 
-The skill caches detected agent availability (Gemini, Codex, Ollama, OpenRouter) at `~/.claude/do-env.json` so it doesn't re-run detection checks on every invocation. The cache is created automatically on first run.
+The skill caches detected agent availability at `~/.claude/do-env.json` so it doesn't re-run detection checks on every invocation. The cache is created automatically on first run.
 
 To force a re-detection (e.g. after installing or removing an agent CLI):
 
@@ -116,7 +116,10 @@ Optionally create `.claude/do-config.json` in your project root:
     "gemini": "cat {file} | gemini -p \"Review the content via stdin.\" -o text",
     "codex": "cat {file} | codex exec -q -",
     "ollama": "cat {file} | ollama run {model}",
-    "openrouter": "${CLAUDE_SKILL_DIR}/scripts/openrouter.sh {file} {model}"
+    "openrouter": "${CLAUDE_SKILL_DIR}/scripts/openrouter.sh {file} {model}",
+    "claude": "cat {file} | claude -p --bare --output-format text --allowedTools \"Read\"",
+    "aider": "aider --no-auto-commits --no-git --dry-run --yes --message-file {file}",
+    "openai": "${CLAUDE_SKILL_DIR}/scripts/openai-compatible.sh {file} {model}"
   },
   "qc": {
     "test": "npm test",
@@ -139,6 +142,10 @@ Agent format:
 - `"ollama:<model>"` — Ollama with a local model (e.g. `"ollama:qwen2.5-coder"`)
 - `"openrouter"` — OpenRouter API with default model (cloud)
 - `"openrouter:<model>"` — OpenRouter with a specific model (e.g. `"openrouter:anthropic/claude-sonnet-4"`)
+- `"claude"` — Claude Code headless mode (cloud)
+- `"aider"` — Aider in dry-run review mode (uses your configured LLM)
+- `"openai"` — Any OpenAI-compatible API with default model (cloud/local)
+- `"openai:<model>"` — OpenAI-compatible API with a specific model (e.g. `"openai:gpt-4.1-mini"`)
 
 This lets you use fast local models for plan review and more capable cloud models for code review.
 
@@ -163,7 +170,7 @@ Without a config file, the skill auto-detects available agents and project type.
 
 ## Privacy Note
 
-When using cloud-based agents (Gemini, Codex, OpenRouter), the skill sends your implementation plans and code diffs to those external services for review. If your codebase contains proprietary or sensitive code, consider using a local agent like Ollama instead, or review the prompts being sent by checking the temp files before they are submitted.
+When using cloud-based agents (Gemini, Codex, OpenRouter, Claude Code, OpenAI-compatible), the skill sends your implementation plans and code diffs to those external services for review. If your codebase contains proprietary or sensitive code, consider using a local agent like Ollama or Aider with a local model instead, or review the prompts being sent by checking the temp files before they are submitted.
 
 ## Requirements
 
@@ -176,6 +183,9 @@ When using cloud-based agents (Gemini, Codex, OpenRouter), the skill sends your 
 | [Codex CLI](https://github.com/openai/codex-cli) | `brew install codex` | Cloud | Code review, built-in `codex review` |
 | [Ollama](https://ollama.com) | `brew install ollama` | Local | Fast plan review, small tasks |
 | [OpenRouter](https://openrouter.ai/) | Set `OPENROUTER_API_KEY` env var | Cloud | Wide variety of models via API |
+| [Claude Code](https://claude.com/claude-code) | `npm i -g @anthropic-ai/claude-code` | Cloud | Headless review via `claude -p` |
+| [Aider](https://aider.chat) | `pip install aider-chat` | Cloud/Local | Dry-run review, works with any LLM |
+| OpenAI-compatible | Set `OPENAI_API_KEY` env var | Cloud/Local | OpenAI, Azure, LM Studio, any compatible API |
 
 ### Recommended Ollama Models for Code Review
 
@@ -212,7 +222,8 @@ task-workflow-skill/
 │       │   ├── plan-review.md    # Template: external agent plan review
 │       │   └── code-review.md    # Template: external agent code review
 │       └── scripts/
-│           └── openrouter.sh     # OpenRouter API integration script
+│           ├── openrouter.sh         # OpenRouter API integration
+│           └── openai-compatible.sh  # OpenAI-compatible API integration
 ├── install.sh                # Symlink installer for direct use
 ├── CHANGELOG.md              # Version history
 ├── README.md                 # This file
@@ -222,7 +233,7 @@ task-workflow-skill/
 ## How It Works
 
 1. **Plan**: Claude researches the codebase and creates a step-by-step plan, saved to `.claude/plans/`
-2. **Analyze**: The plan is sent to an external agent (Gemini/Codex/Ollama/OpenRouter) for independent review. If issues are found, the plan is revised.
+2. **Analyze**: The plan is sent to an external agent for independent review. If issues are found, the plan is revised.
 3. **Approve**: You review the plan and external feedback, then approve.
 4. **Implement**: Claude spawns subagents to implement the plan in isolated contexts.
 5. **QC**: Automated tests/builds run first. Then an external agent reviews the code diff for plan compliance and quality.

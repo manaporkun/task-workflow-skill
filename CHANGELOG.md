@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.4.0] - 2026-03-23
+
+### Added
+
+* **Claude Code headless agent** — Review via `claude -p --bare --output-format text`. Detected via `which claude`.
+* **Aider agent** — Review via `aider --dry-run --message-file`. Detected via `which aider`. Works with any LLM Aider supports.
+* **OpenAI-compatible API agent** — Generic integration via `scripts/openai-compatible.sh` for any OpenAI-compatible endpoint (OpenAI, Azure, LM Studio, etc.). Detected via `OPENAI_API_KEY` or `OPENAI_COMPATIBLE_API_KEY` env var. Supports model selection with `"openai:<model>"` format (default: `gpt-4o`). Set `OPENAI_BASE_URL` or `OPENAI_COMPATIBLE_BASE_URL` for non-OpenAI providers.
+
 ## [1.3.0](https://github.com/manaporkun/task-workflow-skill/compare/v1.2.0...v1.3.0) (2026-03-23)
 
 ### Features
