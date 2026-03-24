@@ -3,7 +3,7 @@
 [![Test](https://github.com/manaporkun/claude-plugins/actions/workflows/test.yml/badge.svg)](https://github.com/manaporkun/claude-plugins/actions/workflows/test.yml)
 [![Release](https://github.com/manaporkun/claude-plugins/actions/workflows/release.yml/badge.svg)](https://github.com/manaporkun/claude-plugins/actions/workflows/release.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-![Version](https://img.shields.io/badge/version-1.4.0-green)
+[![Version](https://img.shields.io/github/v/release/manaporkun/claude-plugins)](https://github.com/manaporkun/claude-plugins/releases)
 
 A Claude Code skill that turns any task into a systematic, quality-controlled workflow with external agent review.
 

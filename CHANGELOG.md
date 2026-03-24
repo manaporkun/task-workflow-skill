@@ -8,16 +8,16 @@
 * **Aider agent** — Review via `aider --dry-run --message-file`. Detected via `which aider`. Works with any LLM Aider supports.
 * **OpenAI-compatible API agent** — Generic integration via `scripts/openai-compatible.sh` for any OpenAI-compatible endpoint (OpenAI, Azure, LM Studio, etc.). Detected via `OPENAI_API_KEY` or `OPENAI_COMPATIBLE_API_KEY` env var. Supports model selection with `"openai:<model>"` format (default: `gpt-4o`). Set `OPENAI_BASE_URL` or `OPENAI_COMPATIBLE_BASE_URL` for non-OpenAI providers.
 
-## [1.3.0](https://github.com/manaporkun/task-workflow-skill/compare/v1.2.0...v1.3.0) (2026-03-23)
+## [1.3.0](https://github.com/manaporkun/claude-plugins/compare/v1.2.0...v1.3.0) (2026-03-23)
 
 ### Features
 
-* Add test suite, CI, and improve agent timeout reliability ([6678165](https://github.com/manaporkun/task-workflow-skill/commit/6678165dea6365d00092278dfb018cf470c35850))
+* Add test suite, CI, and improve agent timeout reliability ([6678165](https://github.com/manaporkun/claude-plugins/commit/6678165dea6365d00092278dfb018cf470c35850))
 * **OpenRouter API integration** — Real integration via `scripts/openrouter.sh` using curl and the OpenRouter REST API. Detected via `OPENROUTER_API_KEY` env var instead of a non-existent CLI binary. Supports model selection with `"openrouter:<model>"` format (default: `google/gemini-2.0-flash-001`).
 
 ### Bug Fixes
 
-* Bash arithmetic compatibility with set -e in test.sh ([9f1feee](https://github.com/manaporkun/task-workflow-skill/commit/9f1feeeeb4d5d98608c533f5a755b452387af158))
+* Bash arithmetic compatibility with set -e in test.sh ([9f1feee](https://github.com/manaporkun/claude-plugins/commit/9f1feeeeb4d5d98608c533f5a755b452387af158))
 
 ### Removed
 
