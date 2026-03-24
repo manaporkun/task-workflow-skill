@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.4.0](https://github.com/manaporkun/claude-plugins/compare/v1.3.0...v1.4.0) (2026-03-24)
+
+
+### Features
+
+* Add branch creation, resume, complexity estimate, and safe/risky review ([4a34402](https://github.com/manaporkun/claude-plugins/commit/4a3440207982bcf48c33e250db5a777e89ca7ac6))
+* Add Claude Code, Aider, and OpenAI-compatible API agent support ([a5842a0](https://github.com/manaporkun/claude-plugins/commit/a5842a0a9fe36a1758f0e8fcc0ae4dd2829a212e))
+* Add OpenRouter API integration, remove Antigravity placeholder ([a68fb88](https://github.com/manaporkun/claude-plugins/commit/a68fb88028e302971e0777a39f6cb9d27558b16c))
+
+
+### Bug Fixes
+
+* Prevent parallel Bash call cancellation in environment detection ([cb248ee](https://github.com/manaporkun/claude-plugins/commit/cb248ee39c833ab2317255ed634c599f5364b463))
+* Relax config field matching in test to support table format ([d10b601](https://github.com/manaporkun/claude-plugins/commit/d10b6019374d3e54f74a1a6da2e07f805fe7ec97))
+* Sync release-please manifest, fix CHANGELOG URLs, dynamic version badge ([8303405](https://github.com/manaporkun/claude-plugins/commit/83034059e936bf1db4b1063caf25083180a1dcc5))
+
 ## [1.4.0] - 2026-03-23
 
 ### Added
