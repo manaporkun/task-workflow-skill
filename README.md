@@ -1,7 +1,7 @@
 # /do — Structured Task Workflow
 
-[![Test](https://github.com/manaporkun/task-workflow-skill/actions/workflows/test.yml/badge.svg)](https://github.com/manaporkun/task-workflow-skill/actions/workflows/test.yml)
-[![Release](https://github.com/manaporkun/task-workflow-skill/actions/workflows/release.yml/badge.svg)](https://github.com/manaporkun/task-workflow-skill/actions/workflows/release.yml)
+[![Test](https://github.com/manaporkun/claude-plugins/actions/workflows/test.yml/badge.svg)](https://github.com/manaporkun/claude-plugins/actions/workflows/test.yml)
+[![Release](https://github.com/manaporkun/claude-plugins/actions/workflows/release.yml/badge.svg)](https://github.com/manaporkun/claude-plugins/actions/workflows/release.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![Version](https://img.shields.io/badge/version-1.4.0-green)
 
@@ -66,7 +66,7 @@ Agent availability is cached at `~/.claude/do-env.json`. To force re-detection:
 ### Plugin marketplace
 
 ```
-/plugin marketplace add manaporkun/task-workflow-skill
+/plugin marketplace add manaporkun/claude-plugins
 /plugin install task-workflow-skill
 /reload-plugins
 ```
@@ -76,15 +76,15 @@ The skill is available as `/task-workflow-skill:do`.
 ### Symlink installer
 
 ```bash
-git clone https://github.com/manaporkun/task-workflow-skill.git
-cd task-workflow-skill && ./install.sh
+git clone https://github.com/manaporkun/claude-plugins.git
+cd claude-plugins && ./install.sh
 ```
 
 Creates a symlink so `git pull` updates take effect immediately. The skill is available as `/do`.
 
 ### Other options
 
-- **Direct loading**: `claude --plugin-dir ./task-workflow-skill`
+- **Direct loading**: `claude --plugin-dir ./claude-plugins`
 - **Manual copy**: Copy `skills/do/` into `~/.claude/skills/` (user-wide) or `.claude/skills/` (project-scoped)
 
 ## Configuration

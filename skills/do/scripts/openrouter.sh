@@ -30,8 +30,8 @@ RESPONSE=$(curl -s -w "\n%{http_code}" \
   -X POST "https://openrouter.ai/api/v1/chat/completions" \
   -H "Authorization: Bearer $OPENROUTER_API_KEY" \
   -H "Content-Type: application/json" \
-  -H "HTTP-Referer: https://github.com/manaporkun/task-workflow-skill" \
-  -H "X-Title: task-workflow-skill" \
+  -H "HTTP-Referer: https://github.com/manaporkun/claude-plugins" \
+  -H "X-Title: claude-plugins" \
   -d "{
     \"model\": \"$MODEL\",
     \"messages\": [{\"role\": \"user\", \"content\": $ESCAPED_PROMPT}]

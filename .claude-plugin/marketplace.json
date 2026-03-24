@@ -1,8 +1,8 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "task-workflow-skill",
+  "name": "claude-plugins",
   "version": "1.4.0",
-  "description": "Marketplace for task-workflow-skill plugins",
+  "description": "Claude Code plugins by Orkun Manap",
   "owner": {
     "name": "Orkun Manap"
   },
