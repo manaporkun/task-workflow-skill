@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "manaporkun-plugins",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Claude Code plugins by Orkun Manap",
   "owner": {
     "name": "Orkun Manap"
@@ -10,7 +10,7 @@
     {
       "name": "task",
       "description": "Structured task execution with multi-agent review: plan, analyze, approve, implement, QC, present",
-      "version": "1.4.0",
+      "version": "1.5.0",
       "author": {
         "name": "Orkun Manap"
       },
