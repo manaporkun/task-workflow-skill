@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.0](https://github.com/manaporkun/claude-plugins/compare/v1.5.1...v1.6.0) (2026-03-25)
+
+
+### Features
+
+* Switch copilot agent to use copilot CLI instead of token-based API ([2ef107d](https://github.com/manaporkun/claude-plugins/commit/2ef107d55cb47bd07218186e23d08ab780fec59b))
+
 ## [1.5.1](https://github.com/manaporkun/claude-plugins/compare/v1.5.0...v1.5.1) (2026-03-25)
 
 
