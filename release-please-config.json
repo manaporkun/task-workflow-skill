@@ -6,19 +6,12 @@
       "changelog-path": "CHANGELOG.md",
       "extra-files": [
         {
-          "type": "json",
-          "path": "plugins/task/.claude-plugin/plugin.json",
-          "jsonpath": "$.version"
+          "type": "generic",
+          "path": "plugins/task/.claude-plugin/plugin.json"
         },
         {
-          "type": "json",
-          "path": ".claude-plugin/marketplace.json",
-          "jsonpath": "$.version"
-        },
-        {
-          "type": "json",
-          "path": ".claude-plugin/marketplace.json",
-          "jsonpath": "$.plugins[0].version"
+          "type": "generic",
+          "path": ".claude-plugin/marketplace.json"
         }
       ]
     }
