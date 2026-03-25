@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.5.1](https://github.com/manaporkun/claude-plugins/compare/v1.5.0...v1.5.1) (2026-03-25)
+
+
+### Bug Fixes
+
+* Bump plugin.json and marketplace.json to 1.5.0 ([1ce5262](https://github.com/manaporkun/claude-plugins/commit/1ce5262be918036f2c920913ef79df54d6e21661))
+* Switch extra-files to generic type so release-please updates version files ([9440309](https://github.com/manaporkun/claude-plugins/commit/9440309e5035c44bcb11e16917a292119f7dad8a))
+
 ## [1.5.0](https://github.com/manaporkun/claude-plugins/compare/v1.4.0...v1.5.0) (2026-03-25)
 
 
