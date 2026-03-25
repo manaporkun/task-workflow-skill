@@ -47,7 +47,7 @@ The skill can use any of these agents for plan and code review. All are optional
 | [Claude Code](https://claude.com/claude-code) | `npm i -g @anthropic-ai/claude-code` | Cloud | `which claude` |
 | [Aider](https://aider.chat) | `pip install aider-chat` | Cloud/Local | `which aider` |
 | OpenAI-compatible | Set `OPENAI_API_KEY` | Cloud/Local | env var |
-| GitHub Copilot | Set `GITHUB_TOKEN` or `GH_TOKEN` | Cloud | env var |
+| GitHub Copilot | `npm install -g @github/copilot-cli` | Cloud | `which copilot` |
 
 Agent availability is cached at `~/.claude/do-env.json`. To force re-detection:
 
@@ -137,10 +137,10 @@ Each entry is an ordered fallback list — the skill tries the first available a
 | `"ollama:<model>"` | `"ollama:qwen2.5-coder"` | Ollama with a specific model |
 | `"openrouter:<model>"` | `"openrouter:anthropic/claude-sonnet-4"` | OpenRouter with a specific model |
 | `"openai:<model>"` | `"openai:gpt-4.1-mini"` | Any OpenAI-compatible API |
-| `"copilot"` | | GitHub Copilot (requires `GITHUB_TOKEN` or `GH_TOKEN`) |
-| `"copilot:<model>"` | `"copilot:claude-sonnet-4-5"` | GitHub Copilot with a specific model |
+| `"copilot"` | | GitHub Copilot CLI (`copilot -p`) |
+| `"copilot:<model>"` | `"copilot:gpt-4.1"` | GitHub Copilot CLI with a specific model |
 
-Agents without `:<model>` use their default model. `openrouter` defaults to `google/gemini-3.1-pro-preview`, `openai` defaults to `gpt-5.4`, `copilot` defaults to `gpt-4o`. Both `:` and `/` are accepted as the model separator.
+Agents without `:<model>` use their default model. `openrouter` defaults to `google/gemini-3.1-pro-preview`, `openai` defaults to `gpt-5.4`. Both `:` and `/` are accepted as the model separator.
 
 ### QC commands
 
@@ -211,7 +211,7 @@ claude-plugins/
 
 **OpenRouter/OpenAI not working**: Verify env vars are set (`echo $OPENROUTER_API_KEY`). For non-OpenAI providers, also set `OPENAI_BASE_URL` or `OPENAI_COMPATIBLE_BASE_URL`.
 
-**GitHub Copilot not working**: Verify `GITHUB_TOKEN` or `GH_TOKEN` is set and the account has an active Copilot subscription. The token must have sufficient scopes to access the Copilot API.
+**GitHub Copilot not working**: Verify `copilot` CLI is installed (`which copilot`) and authenticated (`copilot login`). Requires an active GitHub Copilot subscription.
 
 ## License
 

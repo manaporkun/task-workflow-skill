@@ -46,12 +46,11 @@ Agent availability is cached at `~/.claude/do-env.json` to avoid redundant `whic
 1. **Read cache**: `cat ~/.claude/do-env.json 2>/dev/null || true`
 2. **If cache exists and is valid JSON**:
    - Use the `agents` array and `ollamaModels` array from the cache
-   - **Validate** (only if `agents` is non-empty): for CLI-based agents (`gemini`, `codex`, `ollama`, `claude`, `aider`), run `which <agent> 2>/dev/null` to confirm it's still installed. For `openrouter`, check `[ -n "${OPENROUTER_API_KEY:-}" ]`. For `openai`, check `[ -n "${OPENAI_API_KEY:-}${OPENAI_COMPATIBLE_API_KEY:-}" ]`. For `copilot`, check `[ -n "${GITHUB_TOKEN:-}${GH_TOKEN:-}" ]`. If validation fails for the first agent in the list or `agents` is empty, discard cache and proceed to step 3.
+   - **Validate** (only if `agents` is non-empty): for CLI-based agents (`gemini`, `codex`, `ollama`, `claude`, `aider`, `copilot`), run `which <agent> 2>/dev/null` to confirm it's still installed. For `openrouter`, check `[ -n "${OPENROUTER_API_KEY:-}" ]`. For `openai`, check `[ -n "${OPENAI_API_KEY:-}${OPENAI_COMPATIBLE_API_KEY:-}" ]`. If validation fails for the first agent in the list or `agents` is empty, discard cache and proceed to step 3.
 3. **If cache is missing or invalid** — run full detection:
-   - `for cmd in gemini codex ollama claude aider; do which $cmd 2>/dev/null && echo "$cmd: found" || echo "$cmd: not found"; done`
+   - `for cmd in gemini codex ollama claude aider copilot; do which $cmd 2>/dev/null && echo "$cmd: found" || echo "$cmd: not found"; done`
    - **OpenRouter**: detected via environment variable, not a CLI binary. Check: `[ -n "${OPENROUTER_API_KEY:-}" ] && echo "openrouter: found" || echo "openrouter: not found"`
    - **OpenAI-compatible**: detected via environment variable. Check: `[ -n "${OPENAI_API_KEY:-}${OPENAI_COMPATIBLE_API_KEY:-}" ] && echo "openai: found" || echo "openai: not found"`
-   - **GitHub Copilot**: detected via environment variable. Check: `[ -n "${GITHUB_TOKEN:-}${GH_TOKEN:-}" ] && echo "copilot: found" || echo "copilot: not found"`
    - If ollama was found: `ollama list 2>/dev/null`
    - **Save cache**: write a JSON file to `~/.claude/do-env.json` with this structure:
      ```json
@@ -100,7 +99,7 @@ Schema:
     "claude": "cat {file} | claude -p --bare --output-format text --allowedTools \"Read\"",
     "aider": "aider --no-auto-commits --no-git --dry-run --yes --message-file {file}",
     "openai": "${CLAUDE_SKILL_DIR}/scripts/openai-compatible.sh {file} {model}",
-    "copilot": "${CLAUDE_SKILL_DIR}/scripts/copilot.sh {file} {model}"
+    "copilot": "copilot -p \"$(cat {file})\" -s --allow-all-tools"
   },
   "qc": {
     "test": "npm test",
@@ -127,10 +126,10 @@ Agent format:
 - `"aider"` — Aider in dry-run review mode
 - `"openai"` — OpenAI-compatible API (default model: `gpt-5.4`)
 - `"openai:<model>"` — OpenAI-compatible API with a specific model (e.g. `"openai:gpt-4.1-mini"`)
-- `"copilot"` — GitHub Copilot API (default model: `gpt-4o`)
-- `"copilot:<model>"` — GitHub Copilot API with a specific model (e.g. `"copilot:claude-sonnet-4-5"`)
+- `"copilot"` — GitHub Copilot CLI (`copilot -p`)
+- `"copilot:<model>"` — GitHub Copilot CLI with a specific model (e.g. `"copilot:gpt-4.1"`)
 
-The model separator may be `:` or `/` interchangeably (e.g. `copilot/gpt-4o` === `copilot:gpt-4o`). Normalise to `:` in the config file.
+The model separator may be `:` or `/` interchangeably (e.g. `copilot/gpt-4.1` === `copilot:gpt-4.1`). Normalise to `:` in the config file.
 
 If `agents` is omitted, all phases use the first available agent detected in the environment.
 The `agentCommands` field is optional — if omitted, use the default commands listed in the Analyze phase.
@@ -180,7 +179,7 @@ If no config file exists, auto-detect everything from the environment output abo
    - **Claude Code**: `cat $PLAN_REVIEW_FILE | claude -p --bare --output-format text --allowedTools "Read"` — runs Claude Code in headless mode. Uses `--bare` to skip loading hooks/plugins/MCP for fast, deterministic execution.
    - **Aider**: `aider --no-auto-commits --no-git --dry-run --yes --message-file $PLAN_REVIEW_FILE` — runs Aider in read-only dry-run mode so it reviews without modifying files.
    - **OpenAI-compatible**: `${CLAUDE_SKILL_DIR}/scripts/openai-compatible.sh $PLAN_REVIEW_FILE <model>` — works with any OpenAI-compatible API (OpenAI, Azure, LM Studio, etc.). Replace `<model>` with the model from the agent string (e.g. `openai:gpt-4.1-mini` → `gpt-4.1-mini`). If no model is specified, omit the second argument to use the default (`gpt-5.4`). Requires `OPENAI_API_KEY` or `OPENAI_COMPATIBLE_API_KEY` env var. Set `OPENAI_BASE_URL` or `OPENAI_COMPATIBLE_BASE_URL` for non-OpenAI providers.
-   - **GitHub Copilot**: `${CLAUDE_SKILL_DIR}/scripts/copilot.sh $PLAN_REVIEW_FILE <model>` — calls the GitHub Copilot API. Replace `<model>` with the model from the agent string (e.g. `copilot:claude-sonnet-4-5` → `claude-sonnet-4-5`). If no model is specified, omit the second argument to use the default (`gpt-4o`). Requires `GITHUB_TOKEN` or `GH_TOKEN` env var with an active GitHub Copilot subscription.
+   - **GitHub Copilot**: `copilot -p "$(cat $PLAN_REVIEW_FILE)" -s --allow-all-tools [--model <model>]` — runs the GitHub Copilot CLI in non-interactive mode. Replace `<model>` with the model from the agent string (e.g. `copilot:gpt-4.1` → `gpt-4.1`). Omit `--model` entirely if no model is specified to use Copilot's default. Requires `copilot` CLI installed and authenticated.
    - **Custom**: If `agentCommands` defines a command for this agent, use it with `{file}` replaced by `$PLAN_REVIEW_FILE` and `{model}` replaced by the model name
    - Use the Bash tool's `timeout` parameter instead of the `timeout` shell command (which is unavailable on macOS)
    - If all agents fail or time out, note the failure and continue to the checkpoint without external review.
@@ -312,14 +311,14 @@ The config file is `.claude/do-config.json` in the current project directory.
 | `aider` | Aider in dry-run review mode |
 | `openai` | OpenAI-compatible API (default model: `gpt-5.4`) |
 | `openai:<model>` | OpenAI-compatible API with a specific model |
-| `copilot` | GitHub Copilot API (default model: `gpt-4o`) |
-| `copilot:<model>` | GitHub Copilot with a specific model (e.g. `copilot:claude-sonnet-4-5`) |
+| `copilot` | GitHub Copilot CLI (`copilot -p`) |
+| `copilot:<model>` | GitHub Copilot CLI with a specific model (e.g. `copilot:gpt-4.1`) |
 
 Use comma separation for fallback order: `copilot,gemini` means try copilot first, then gemini.
 
 The model separator can be either `:` or `/` — `copilot:gpt-4o` and `copilot/gpt-4o` are equivalent. Always normalise to `:` when writing to the config file.
 
-CLI-only agents (`gemini`, `codex`, `claude`, `aider`) do not accept a model suffix.
+CLI-only agents (`gemini`, `codex`, `claude`, `aider`) do not accept a model suffix. `copilot` accepts an optional model suffix — omit it to use Copilot's default model.
 
 ---
 
