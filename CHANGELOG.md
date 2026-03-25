@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.1](https://github.com/manaporkun/claude-plugins/compare/v1.6.0...v1.6.1) (2026-03-25)
+
+
+### Bug Fixes
+
+* **build:** Configure release-please JSON paths ([2f466b5](https://github.com/manaporkun/claude-plugins/commit/2f466b56c5bbb44711c2275f78850bf79bbca756))
+
 ## [1.6.0](https://github.com/manaporkun/claude-plugins/compare/v1.5.1...v1.6.0) (2026-03-25)
 
 
