@@ -3,8 +3,9 @@ name: do
 description: >
   Structured task execution: plan, external analysis, approval, implement,
   quality control, present. Use /do <task description> for any feature, bug fix, or task.
+  Also manages provider/model config via /do config.
 disable-model-invocation: true
-argument-hint: <task description>
+argument-hint: "<task description> | config [subcommand]"
 ---
 
 # /do — Structured Task Workflow
@@ -13,6 +14,8 @@ Execute the following phases strictly in order. Do not skip phases.
 Present output to the user at each checkpoint marked with STOP.
 
 ## Input Validation
+
+**If `$ARGUMENTS` starts with `config`**: strip `config` from the start of `$ARGUMENTS` (trim remaining whitespace) and jump to the [Config Management](#config-management) section. Do not run any phases.
 
 **If `$ARGUMENTS` contains `--continue`**: strip `--continue` from arguments, then:
 1. List saved plans: `ls .claude/plans/*.md 2>/dev/null`
@@ -23,7 +26,11 @@ Present output to the user at each checkpoint marked with STOP.
 **If `$ARGUMENTS` contains `--refresh-env`**: run `rm ~/.claude/do-env.json 2>/dev/null`, then strip `--refresh-env` from the task description before proceeding.
 
 If `$ARGUMENTS` is empty or contains only whitespace (after stripping flags):
-- Respond with: "Usage: `/do <task description>` — describe what you want to build, fix, or refactor."
+- Respond with:
+  ```
+  Usage: /do <task description>   — plan and implement a task
+         /do config               — view and change provider/model settings
+  ```
 - **STOP. Do not proceed to any phase.**
 
 ## Environment Detection
@@ -39,15 +46,16 @@ Agent availability is cached at `~/.claude/do-env.json` to avoid redundant `whic
 1. **Read cache**: `cat ~/.claude/do-env.json 2>/dev/null || true`
 2. **If cache exists and is valid JSON**:
    - Use the `agents` array and `ollamaModels` array from the cache
-   - **Validate** (only if `agents` is non-empty): for CLI-based agents (`gemini`, `codex`, `ollama`, `claude`, `aider`), run `which <agent> 2>/dev/null` to confirm it's still installed. For `openrouter`, check `[ -n "${OPENROUTER_API_KEY:-}" ]`. For `openai`, check `[ -n "${OPENAI_API_KEY:-}${OPENAI_COMPATIBLE_API_KEY:-}" ]`. If validation fails for the first agent in the list or `agents` is empty, discard cache and proceed to step 3.
+   - **Validate** (only if `agents` is non-empty): for CLI-based agents (`gemini`, `codex`, `ollama`, `claude`, `aider`), run `which <agent> 2>/dev/null` to confirm it's still installed. For `openrouter`, check `[ -n "${OPENROUTER_API_KEY:-}" ]`. For `openai`, check `[ -n "${OPENAI_API_KEY:-}${OPENAI_COMPATIBLE_API_KEY:-}" ]`. For `copilot`, check `[ -n "${GITHUB_TOKEN:-}${GH_TOKEN:-}" ]`. If validation fails for the first agent in the list or `agents` is empty, discard cache and proceed to step 3.
 3. **If cache is missing or invalid** — run full detection:
    - `for cmd in gemini codex ollama claude aider; do which $cmd 2>/dev/null && echo "$cmd: found" || echo "$cmd: not found"; done`
    - **OpenRouter**: detected via environment variable, not a CLI binary. Check: `[ -n "${OPENROUTER_API_KEY:-}" ] && echo "openrouter: found" || echo "openrouter: not found"`
    - **OpenAI-compatible**: detected via environment variable. Check: `[ -n "${OPENAI_API_KEY:-}${OPENAI_COMPATIBLE_API_KEY:-}" ] && echo "openai: found" || echo "openai: not found"`
+   - **GitHub Copilot**: detected via environment variable. Check: `[ -n "${GITHUB_TOKEN:-}${GH_TOKEN:-}" ] && echo "copilot: found" || echo "copilot: not found"`
    - If ollama was found: `ollama list 2>/dev/null`
    - **Save cache**: write a JSON file to `~/.claude/do-env.json` with this structure:
      ```json
-     { "agents": ["gemini", "codex", "claude", "aider", "openrouter", "openai"], "ollamaModels": ["qwen2.5-coder"], "detectedAt": "2026-03-22T14:25:00Z" }
+     { "agents": ["gemini", "codex", "claude", "aider", "openrouter", "openai", "copilot"], "ollamaModels": ["qwen2.5-coder"], "detectedAt": "2026-03-22T14:25:00Z" }
      ```
      Use only the agent names that were found. Use the Bash tool to write the file, e.g.:
      `sh -c 'echo "{\"agents\":[\"gemini\",\"codex\",\"claude\",\"aider\",\"openrouter\",\"openai\"],\"ollamaModels\":[],\"detectedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > ~/.claude/do-env.json'`
@@ -70,7 +78,7 @@ Record which agents are available and proceed. If no external agents are found, 
 If `.claude/do-config.json` exists, validate and use its values:
 - `configVersion` must be `1` if present (reserved for future schema changes). If missing, default to `1`.
 - `agents` must be an object with array values (e.g. `{"planReview": [...], "codeReview": [...]}`), not a bare string or array
-- Each agent entry must match one of: `"gemini"`, `"codex"`, `"ollama:<model>"`, `"openrouter"`, `"openrouter:<model>"`, `"claude"`, `"aider"`, `"openai"`, or `"openai:<model>"`
+- Each agent entry must match one of: `"gemini"`, `"codex"`, `"ollama:<model>"`, `"openrouter"`, `"openrouter:<model>"`, `"claude"`, `"aider"`, `"openai"`, `"openai:<model>"`, `"copilot"`, or `"copilot:<model>"`
 - `maxIterations` and `maxCodeReviewIterations` must be positive integers if present
 - `skipReviewThreshold` must be an object with `maxFiles` and `maxSteps` as positive integers if present
 - If the config is malformed, warn the user and fall back to auto-detection
@@ -91,7 +99,8 @@ Schema:
     "openrouter": "${CLAUDE_SKILL_DIR}/scripts/openrouter.sh {file} {model}",
     "claude": "cat {file} | claude -p --bare --output-format text --allowedTools \"Read\"",
     "aider": "aider --no-auto-commits --no-git --dry-run --yes --message-file {file}",
-    "openai": "${CLAUDE_SKILL_DIR}/scripts/openai-compatible.sh {file} {model}"
+    "openai": "${CLAUDE_SKILL_DIR}/scripts/openai-compatible.sh {file} {model}",
+    "copilot": "${CLAUDE_SKILL_DIR}/scripts/copilot.sh {file} {model}"
   },
   "qc": {
     "test": "npm test",
@@ -118,6 +127,10 @@ Agent format:
 - `"aider"` — Aider in dry-run review mode
 - `"openai"` — OpenAI-compatible API (default model: `gpt-5.4`)
 - `"openai:<model>"` — OpenAI-compatible API with a specific model (e.g. `"openai:gpt-4.1-mini"`)
+- `"copilot"` — GitHub Copilot API (default model: `gpt-4o`)
+- `"copilot:<model>"` — GitHub Copilot API with a specific model (e.g. `"copilot:claude-sonnet-4-5"`)
+
+The model separator may be `:` or `/` interchangeably (e.g. `copilot/gpt-4o` === `copilot:gpt-4o`). Normalise to `:` in the config file.
 
 If `agents` is omitted, all phases use the first available agent detected in the environment.
 The `agentCommands` field is optional — if omitted, use the default commands listed in the Analyze phase.
@@ -167,6 +180,7 @@ If no config file exists, auto-detect everything from the environment output abo
    - **Claude Code**: `cat $PLAN_REVIEW_FILE | claude -p --bare --output-format text --allowedTools "Read"` — runs Claude Code in headless mode. Uses `--bare` to skip loading hooks/plugins/MCP for fast, deterministic execution.
    - **Aider**: `aider --no-auto-commits --no-git --dry-run --yes --message-file $PLAN_REVIEW_FILE` — runs Aider in read-only dry-run mode so it reviews without modifying files.
    - **OpenAI-compatible**: `${CLAUDE_SKILL_DIR}/scripts/openai-compatible.sh $PLAN_REVIEW_FILE <model>` — works with any OpenAI-compatible API (OpenAI, Azure, LM Studio, etc.). Replace `<model>` with the model from the agent string (e.g. `openai:gpt-4.1-mini` → `gpt-4.1-mini`). If no model is specified, omit the second argument to use the default (`gpt-5.4`). Requires `OPENAI_API_KEY` or `OPENAI_COMPATIBLE_API_KEY` env var. Set `OPENAI_BASE_URL` or `OPENAI_COMPATIBLE_BASE_URL` for non-OpenAI providers.
+   - **GitHub Copilot**: `${CLAUDE_SKILL_DIR}/scripts/copilot.sh $PLAN_REVIEW_FILE <model>` — calls the GitHub Copilot API. Replace `<model>` with the model from the agent string (e.g. `copilot:claude-sonnet-4-5` → `claude-sonnet-4-5`). If no model is specified, omit the second argument to use the default (`gpt-4o`). Requires `GITHUB_TOKEN` or `GH_TOKEN` env var with an active GitHub Copilot subscription.
    - **Custom**: If `agentCommands` defines a command for this agent, use it with `{file}` replaced by `$PLAN_REVIEW_FILE` and `{model}` replaced by the model name
    - Use the Bash tool's `timeout` parameter instead of the `timeout` shell command (which is unavailable on macOS)
    - If all agents fail or time out, note the failure and continue to the checkpoint without external review.
@@ -275,3 +289,214 @@ Present to the user:
 4. **Outstanding Items** — any warnings, suggestions, or follow-up tasks
 
 Ask the user for final approval.
+
+---
+
+## Config Management
+
+Reached when `$ARGUMENTS` started with `config`. The remaining text after stripping
+`config` is the subcommand. Parse it and dispatch below.
+
+The config file is `.claude/do-config.json` in the current project directory.
+
+### Valid provider values
+
+| Value | Description |
+|---|---|
+| `gemini` | Gemini CLI |
+| `codex` | Codex CLI |
+| `ollama:<model>` | Ollama with a specific model (e.g. `ollama:qwen2.5-coder`) |
+| `openrouter` | OpenRouter API (default model: `google/gemini-3.1-pro-preview`) |
+| `openrouter:<model>` | OpenRouter with a specific model |
+| `claude` | Claude Code headless mode |
+| `aider` | Aider in dry-run review mode |
+| `openai` | OpenAI-compatible API (default model: `gpt-5.4`) |
+| `openai:<model>` | OpenAI-compatible API with a specific model |
+| `copilot` | GitHub Copilot API (default model: `gpt-4o`) |
+| `copilot:<model>` | GitHub Copilot with a specific model (e.g. `copilot:claude-sonnet-4-5`) |
+
+Use comma separation for fallback order: `copilot,gemini` means try copilot first, then gemini.
+
+The model separator can be either `:` or `/` — `copilot:gpt-4o` and `copilot/gpt-4o` are equivalent. Always normalise to `:` when writing to the config file.
+
+CLI-only agents (`gemini`, `codex`, `claude`, `aider`) do not accept a model suffix.
+
+---
+
+### (no subcommand) or `show`
+
+Print the current configuration.
+
+1. `cat .claude/do-config.json 2>/dev/null || true`
+2. If missing: respond "No `.claude/do-config.json` found — `/do` is using auto-detected defaults." and STOP.
+3. Otherwise parse and display each section:
+
+```
+Provider config (.claude/do-config.json)
+─────────────────────────────────────────
+Plan review agents : copilot, gemini
+Code review agents : copilot:gpt-4o
+Max iterations     : 3
+Max code review    : 2
+Skip threshold     : 1 file / 2 steps
+
+QC commands
+─────────────────────────────────────────
+test  : npm test
+build : npm run build
+lint  : eslint .
+```
+
+Omit sections that are not set.
+
+---
+
+### `set provider <value>`
+
+Set **both** `planReview` and `codeReview` to the same provider(s).
+
+- Parse `<value>`: split on commas, trim each entry, validate against the provider list above. Error and STOP if invalid.
+- Read `.claude/do-config.json` or start from `{"configVersion":1}`.
+- Set `agents.planReview` and `agents.codeReview` to the parsed array.
+- Write back. Respond: "Set both plan and code review agents to: `<value>`"
+
+---
+
+### `set plan <value>`
+
+Set only `agents.planReview`. Same steps as `set provider` but only that field.
+Respond: "Set plan review agents to: `<value>`"
+
+---
+
+### `set code <value>`
+
+Set only `agents.codeReview`. Same steps as `set provider` but only that field.
+Respond: "Set code review agents to: `<value>`"
+
+---
+
+### `set model <model>`
+
+Update the model suffix on all currently configured API providers, in both
+`planReview` and `codeReview`. Skip CLI-only agents (`gemini`, `codex`, `claude`, `aider`).
+
+- If no config file exists: respond "No config found. Use `/do config set provider <provider>` first." and STOP.
+- For each entry in `agents.planReview` and `agents.codeReview`: strip any existing `:<model>` suffix and append `:<model>`.
+- Write back and respond with a summary of what changed.
+
+---
+
+### `set iterations <n>`
+
+Set `maxIterations` (max QC fix retries). Validate `<n>` is a positive integer.
+Respond: "Set max iterations to `<n>`."
+
+---
+
+### `set code-iterations <n>`
+
+Set `maxCodeReviewIterations`. Validate `<n>` is a positive integer.
+Respond: "Set max code review iterations to `<n>`."
+
+---
+
+### `set skip-threshold <maxFiles> <maxSteps>`
+
+Set `skipReviewThreshold`. Validate both are positive integers.
+Respond: "Set skip threshold to `<maxFiles>` file(s) / `<maxSteps>` step(s)."
+
+---
+
+### `set qc <type> <command>`
+
+Add or replace a QC command. `<type>` is the key (e.g. `test`, `lint`).
+Everything after `<type> ` is the command string.
+Respond: "Set QC command `<type>` to: `<command>`"
+
+---
+
+### `unset provider`
+
+Remove the `agents` key from config entirely (revert to auto-detection).
+Respond: "Removed agent config — `/do` will auto-detect available agents."
+
+---
+
+### `unset qc <type>`
+
+Remove `qc.<type>` from config.
+Respond: "Removed QC command `<type>`."
+
+---
+
+### `reset`
+
+Delete `.claude/do-config.json`.
+
+1. Ask: "This will delete `.claude/do-config.json` and revert all settings to defaults. Proceed? (yes/no)"
+2. If yes: `rm -f .claude/do-config.json` → respond "Config deleted."
+3. If no: respond "Cancelled."
+
+---
+
+### `refresh`
+
+Clear the agent detection cache.
+
+1. `rm -f ~/.claude/do-env.json`
+2. Respond: "Agent detection cache cleared. `/do` will re-detect on next run."
+
+---
+
+### Unrecognized subcommand
+
+Respond:
+
+```
+Usage: /do config [subcommand]
+
+  show                               Print current config
+  set provider <value>               Set provider for both phases
+  set plan <value>                   Set provider for plan review only
+  set code <value>                   Set provider for code review only
+  set model <model>                  Update model on all API providers
+  set iterations <n>                 Set max QC fix iterations
+  set code-iterations <n>            Set max code review iterations
+  set skip-threshold <files> <steps> Set small-plan skip threshold
+  set qc <type> <command>            Add or replace a QC command
+  unset provider                     Remove agent config (revert to auto-detect)
+  unset qc <type>                    Remove a QC command
+  reset                              Delete the config file
+  refresh                            Clear agent detection cache
+
+Provider formats:
+  gemini | codex | claude | aider
+  ollama:<model>
+  openrouter | openrouter:<model>
+  openai | openai:<model>
+  copilot | copilot:<model>
+
+Use commas for fallback order: copilot,gemini
+```
+
+---
+
+### File write helper
+
+When writing `.claude/do-config.json`:
+1. Use `python3` to produce pretty-printed JSON (2-space indent).
+2. Preserve all existing keys not touched by the subcommand.
+3. Always keep `configVersion: 1`.
+
+```bash
+python3 - <<'PYEOF' > .claude/do-config.json
+import json, sys
+with open(".claude/do-config.json") as f:
+    data = json.load(f)
+# ... mutate data ...
+print(json.dumps(data, indent=2))
+PYEOF
+```
+
+For a fresh file, start with `{"configVersion": 1}` and mutate from there.
