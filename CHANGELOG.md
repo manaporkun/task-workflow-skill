@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.0](https://github.com/manaporkun/claude-plugins/compare/v1.4.0...v1.5.0) (2026-03-25)
+
+
+### Features
+
+* Add GitHub Copilot support and /do config subcommands ([4a8951a](https://github.com/manaporkun/claude-plugins/commit/4a8951a43ae7d97613547bf6488103fb6e502297))
+
 ## [1.4.0](https://github.com/manaporkun/claude-plugins/compare/v1.3.0...v1.4.0) (2026-03-24)
 
 
