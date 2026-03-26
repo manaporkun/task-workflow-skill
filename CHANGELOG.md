@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.2](https://github.com/manaporkun/claude-plugins/compare/v1.6.1...v1.6.2) (2026-03-26)
+
+
+### Bug Fixes
+
+* Use Bash heredoc for temp file writes and fix codex exec flags ([c64a4c6](https://github.com/manaporkun/claude-plugins/commit/c64a4c6fab3871b7991a50b0a053d116610eeeb5))
+
 ## [1.6.1](https://github.com/manaporkun/claude-plugins/compare/v1.6.0...v1.6.1) (2026-03-25)
 
 
