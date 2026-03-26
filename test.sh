@@ -183,8 +183,24 @@ else
   fail "release metadata is out of sync; run scripts/plugin_versions.py sync-all --write"
 fi
 
+# Test: plugin release-please paths are package-relative
+echo "[12] plugin release-please paths are package-relative"
+if python3 -c "
+import json
+d = json.load(open('$SCRIPT_DIR/release-please-config.json'))
+task = d['packages']['plugins/task']
+assert task['changelog-path'] == 'CHANGELOG.md'
+paths = {entry['jsonpath']: entry['path'] for entry in task['extra-files']}
+assert paths['$.version'] == '.claude-plugin/plugin.json'
+assert paths['$.plugins[0].version'] == '../../.claude-plugin/marketplace.json'
+" 2>/dev/null; then
+  pass "plugin release-please paths are relative"
+else
+  fail "plugin release-please paths are not package-relative"
+fi
+
 # Test: All phases present in SKILL.md
-echo "[12] All 6 phases present in SKILL.md"
+echo "[13] All 6 phases present in SKILL.md"
 PHASES_FOUND=0
 for phase in "Phase 1: PLAN" "Phase 2: ANALYZE" "Phase 3: APPROVE" "Phase 4: IMPLEMENT" "Phase 5: QUALITY" "Phase 6: PRESENT"; do
   grep -q "$phase" "$SCRIPT_DIR/plugins/task/skills/do/SKILL.md" && PHASES_FOUND=$((PHASES_FOUND + 1))

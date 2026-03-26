@@ -130,20 +130,22 @@ def generated_release_please_config(marketplace: dict[str, Any], plugins: list[d
     }
 
     for plugin in plugins:
+        package_path = Path(plugin["path"])
+        root_relative_from_package = Path(*([".."] * len(package_path.parts))) if package_path.parts else Path(".")
         packages[plugin["path"]] = {
             "release-type": "simple",
             "bump-minor-pre-major": True,
             "component": plugin["name"],
-            "changelog-path": f"{plugin['path']}/CHANGELOG.md",
+            "changelog-path": "CHANGELOG.md",
             "extra-files": [
                 {
                     "type": "json",
-                    "path": f"{plugin['path']}/.claude-plugin/plugin.json",
+                    "path": ".claude-plugin/plugin.json",
                     "jsonpath": "$.version",
                 },
                 {
                     "type": "json",
-                    "path": ".claude-plugin/marketplace.json",
+                    "path": str(root_relative_from_package / ".claude-plugin" / "marketplace.json"),
                     "jsonpath": f"$.plugins[{plugin['index']}].version",
                 },
             ],

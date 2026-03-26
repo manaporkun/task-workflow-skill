@@ -16,16 +16,16 @@
       "release-type": "simple",
       "bump-minor-pre-major": true,
       "component": "task",
-      "changelog-path": "plugins/task/CHANGELOG.md",
+      "changelog-path": "CHANGELOG.md",
       "extra-files": [
         {
           "type": "json",
-          "path": "plugins/task/.claude-plugin/plugin.json",
+          "path": ".claude-plugin/plugin.json",
           "jsonpath": "$.version"
         },
         {
           "type": "json",
-          "path": ".claude-plugin/marketplace.json",
+          "path": "../../.claude-plugin/marketplace.json",
           "jsonpath": "$.plugins[0].version"
         }
       ]
