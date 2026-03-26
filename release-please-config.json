@@ -7,12 +7,20 @@
       "extra-files": [
         {
           "type": "json",
-          "path": "plugins/task/.claude-plugin/plugin.json",
+          "path": ".claude-plugin/marketplace.json",
           "jsonpath": "$.version"
-        },
+        }
+      ]
+    },
+    "plugins/task": {
+      "release-type": "simple",
+      "bump-minor-pre-major": true,
+      "component": "task",
+      "changelog-path": "plugins/task/CHANGELOG.md",
+      "extra-files": [
         {
           "type": "json",
-          "path": ".claude-plugin/marketplace.json",
+          "path": "plugins/task/.claude-plugin/plugin.json",
           "jsonpath": "$.version"
         },
         {

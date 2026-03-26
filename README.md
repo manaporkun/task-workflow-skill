@@ -93,6 +93,63 @@ Both `:` and `/` work as the model separator — `copilot:gpt-4o` and `copilot/g
 
 The skill is available as `/task:do`.
 
+## Release Management
+
+Plugin versions are managed independently. The repository uses a generated Release Please config with:
+
+- one root package for the overall marketplace release
+- one Release Please package per `plugins/*` directory
+
+### Normal workflow for skill changes
+
+If you change an existing skill under `plugins/<name>/`, you usually do not edit version numbers manually.
+
+1. Make your code changes.
+2. Commit with a conventional commit message scoped to the plugin, for example:
+
+```bash
+feat(task): add approval retry handling
+fix(task): avoid duplicate QC runs
+```
+
+3. Run:
+
+```bash
+bash test.sh
+```
+
+4. Push your branch and merge it to `main`.
+5. After the merge, the release workflow runs and Release Please opens or updates the release PR.
+6. Merge that release PR to apply the version bump and changelog entries.
+
+For a normal plugin change, the release PR updates only:
+
+- `plugins/<name>/.claude-plugin/plugin.json`
+- the matching plugin entry in `.claude-plugin/marketplace.json`
+
+### When to run the sync script
+
+Run this when the plugin list or plugin metadata structure changes:
+
+```bash
+python3 scripts/plugin_versions.py sync-all --write
+```
+
+Use it for cases like:
+
+- adding a new plugin under `plugins/`
+- renaming a plugin
+- changing marketplace entries manually
+
+Useful manual commands:
+
+```bash
+python3 scripts/plugin_versions.py changed --base origin/main --head HEAD
+python3 scripts/plugin_versions.py bump task patch
+```
+
+The release workflow regenerates `release-please-config.json` and `.release-please-manifest.json` automatically, so new plugins do not require hand-editing JSONPath entries.
+
 ### Symlink installer
 
 ```bash

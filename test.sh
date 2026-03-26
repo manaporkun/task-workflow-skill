@@ -151,28 +151,40 @@ else
   fail "missing placeholders — plan-review: $PLAN_OK, code-review: $CODE_OK"
 fi
 
-# Test: marketplace.json is valid JSON with required fields and consistent version
-echo "[10] marketplace.json is valid JSON with required fields and version consistency"
+# Test: marketplace.json is valid JSON and each plugin entry matches its plugin.json
+echo "[10] marketplace.json is valid JSON and plugin versions are consistent"
 if python3 -c "
 import json, sys
+from pathlib import Path
 d = json.load(open('$SCRIPT_DIR/.claude-plugin/marketplace.json'))
 assert 'name' in d, 'missing name'
 assert 'version' in d, 'missing version'
 assert 'plugins' in d and len(d['plugins']) > 0, 'missing plugins'
-plugin = d['plugins'][0]
-assert 'name' in plugin, 'plugin missing name'
-assert 'source' in plugin, 'plugin missing source'
-p = json.load(open('$SCRIPT_DIR/plugins/task/.claude-plugin/plugin.json'))
-assert d['version'] == p['version'], f'marketplace version {d[\"version\"]} != plugin.json version {p[\"version\"]}'
-assert plugin['version'] == p['version'], f'marketplace plugin version {plugin[\"version\"]} != plugin.json version {p[\"version\"]}'
+for plugin in d['plugins']:
+    assert 'name' in plugin, 'plugin missing name'
+    assert 'source' in plugin, 'plugin missing source'
+    manifest_path = Path('$SCRIPT_DIR') / plugin['source'].removeprefix('./') / '.claude-plugin' / 'plugin.json'
+    p = json.load(open(manifest_path))
+    assert plugin['version'] == p['version'], (
+        f'marketplace plugin version {plugin[\"version\"]} != '
+        f'{manifest_path} version {p[\"version\"]}'
+    )
 " 2>/dev/null; then
-  pass "marketplace.json valid and versions consistent"
+  pass "marketplace.json valid and plugin versions consistent"
 else
-  fail "marketplace.json invalid, missing fields, or version mismatch with plugin.json"
+  fail "marketplace.json invalid, missing fields, or plugin version mismatch"
+fi
+
+# Test: generated release metadata is in sync with plugin manifests
+echo "[11] generated release metadata is in sync"
+if python3 "$SCRIPT_DIR/scripts/plugin_versions.py" sync-all 2>/dev/null; then
+  pass "release metadata in sync"
+else
+  fail "release metadata is out of sync; run scripts/plugin_versions.py sync-all --write"
 fi
 
 # Test: All phases present in SKILL.md
-echo "[11] All 6 phases present in SKILL.md"
+echo "[12] All 6 phases present in SKILL.md"
 PHASES_FOUND=0
 for phase in "Phase 1: PLAN" "Phase 2: ANALYZE" "Phase 3: APPROVE" "Phase 4: IMPLEMENT" "Phase 5: QUALITY" "Phase 6: PRESENT"; do
   grep -q "$phase" "$SCRIPT_DIR/plugins/task/skills/do/SKILL.md" && PHASES_FOUND=$((PHASES_FOUND + 1))

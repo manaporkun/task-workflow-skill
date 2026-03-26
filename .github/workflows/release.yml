@@ -12,8 +12,12 @@ jobs:
   release-please:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate release-please config
+        run: python3 scripts/plugin_versions.py sync-all --write
+
       - uses: googleapis/release-please-action@v4
         with:
-          release-type: simple
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
