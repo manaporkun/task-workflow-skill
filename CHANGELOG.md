@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.4](https://github.com/manaporkun/claude-plugins/compare/v1.6.3...v1.6.4) (2026-03-26)
+
+
+### Bug Fixes
+
+* **ci:** sync release metadata in release workflow ([687b23e](https://github.com/manaporkun/claude-plugins/commit/687b23e747bad6b0bf5dd8817f5d17b7f90723a2))
+
 ## [1.6.3](https://github.com/manaporkun/claude-plugins/compare/v1.6.2...v1.6.3) (2026-03-26)
 
 
