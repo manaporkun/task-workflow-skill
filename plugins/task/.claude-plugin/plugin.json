@@ -1,6 +1,6 @@
 {
   "name": "task",
-  "version": "1.6.1",
+  "version": "1.7.0",
   "description": "Structured task execution with multi-agent review: plan, analyze, approve, implement, QC, present",
   "author": {
     "name": "Orkun Manap"

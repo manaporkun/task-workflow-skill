@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.6.3](https://github.com/manaporkun/claude-plugins/compare/v1.6.2...v1.6.3) (2026-03-26)
+
+
+### Bug Fixes
+
+* **build:** sync marketplace metadata on release branches ([d6a63e3](https://github.com/manaporkun/claude-plugins/commit/d6a63e39d99e63cf285572c859a96373ff09d72d))
+* **build:** use package-relative release-please paths ([e476805](https://github.com/manaporkun/claude-plugins/commit/e476805fc4369921519356f02ba0c980879ece3e))
+
 ## [1.6.2](https://github.com/manaporkun/claude-plugins/compare/v1.6.1...v1.6.2) (2026-03-26)
 
 
