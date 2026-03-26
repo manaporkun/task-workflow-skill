@@ -1,0 +1,33 @@
+name: Sync Release PR Metadata
+
+on:
+  push:
+    branches:
+      - "release-please--**"
+
+permissions:
+  contents: write
+
+jobs:
+  sync-release-metadata:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+
+      - name: Sync generated metadata
+        run: python3 scripts/plugin_versions.py sync-all --write
+
+      - name: Commit synced metadata
+        run: |
+          if git diff --quiet; then
+            echo "No metadata changes to commit"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .claude-plugin/marketplace.json release-please-config.json .release-please-manifest.json
+          git commit -m "chore: sync release metadata"
+          git push

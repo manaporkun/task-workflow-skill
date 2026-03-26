@@ -190,9 +190,9 @@ import json
 d = json.load(open('$SCRIPT_DIR/release-please-config.json'))
 task = d['packages']['plugins/task']
 assert task['changelog-path'] == 'CHANGELOG.md'
-paths = {entry['jsonpath']: entry['path'] for entry in task['extra-files']}
-assert paths['$.version'] == '.claude-plugin/plugin.json'
-assert paths['$.plugins[0].version'] == '../../.claude-plugin/marketplace.json'
+assert task['extra-files'] == [
+    {'type': 'json', 'path': '.claude-plugin/plugin.json', 'jsonpath': '$.version'}
+]
 " 2>/dev/null; then
   pass "plugin release-please paths are relative"
 else
