@@ -1,0 +1,13 @@
+{
+  "configVersion": 1,
+  "agents": {
+    "planReview": [
+      "copilot",
+      "gemini"
+    ],
+    "codeReview": [
+      "copilot",
+      "gemini"
+    ]
+  }
+}
